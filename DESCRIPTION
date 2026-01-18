@@ -1,0 +1,54 @@
+Package: LIPIDIFy
+Type: Package
+Title: Comprehensive Lipidomics Data Analysis with Interactive Visualization
+Version: 1.0.0
+Authors@R: c(
+    person("Fayrouz", "Hammal", email = "fayrouz.hammal@petermac.org", 
+           role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-7612-4953"))
+    )
+Description: Provides a comprehensive toolkit for lipidomics data analysis,
+    including data preprocessing, normalization, differential abundance analysis
+    using limma and EdgeR, enrichment analysis, and extensive visualization
+    capabilities. Features both an interactive Shiny interface for biologists
+    and programmatic R functions for bioinformaticians. Supports flexible lipid
+    classification schemes and custom enrichment sets.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Depends:
+    R (>= 4.3.0)
+Imports:
+    shiny (>= 1.7.0),
+    shinydashboard (>= 0.7.0),
+    DT (>= 0.27),
+    plotly (>= 4.10.0),
+    ggplot2 (>= 3.4.0),
+    ggrepel (>= 0.9.0),
+    limma,
+    edgeR,
+    fgsea (>= 1.20.0),
+    FactoMineR (>= 2.7),
+    pls (>= 2.8.0),
+    tidyr (>= 1.3.0),
+    stringr (>= 1.5.0),
+    openxlsx (>= 4.2.0),
+    pheatmap (>= 1.0.12),
+    grid,
+    grDevices,
+    stats,
+    utils,
+    gridExtra (>= 2.3),
+    scales (>= 1.2.0)
+Suggests:
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0),
+    BiocStyle
+VignetteBuilder: knitr
+biocViews: Lipidomics, Metabolomics, DifferentialExpression, 
+    Normalization, Visualization, Software, GeneSetEnrichment
+RoxygenNote: 7.3.3
+URL: https://github.com/yourusername/LIPIDIFy
+BugReports: https://github.com/yourusername/LIPIDIFy/issues
+Config/testthat/edition: 3
