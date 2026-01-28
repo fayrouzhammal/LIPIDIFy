@@ -137,6 +137,7 @@ The input file must be a **CSV** with:
 **Requirements**
 - `Sample Name` and `Sample Group` are required
 - Lipid names must be column headers
+- No other metadata supported
 - Values must be numeric
 - Comma-separated CSV format
 
