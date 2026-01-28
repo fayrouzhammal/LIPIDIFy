@@ -30,7 +30,7 @@ The package provides an end-to-end pipeline from raw lipidomics data to biologic
 ## 🚀 Installation
 
 ```r
-remotes::install_github("YOUR_GITHUB_USERNAME/LIPIDIFy")
+remotes::install_github("fayrouzhammal/LIPIDIFy")
 library(LIPIDIFy)
 ```
 
