@@ -1,7 +1,7 @@
 Package: LIPIDIFy
 Type: Package
 Title: Comprehensive Lipidomics Data Analysis with Interactive Visualization
-Version: 1.0.0
+Version: 0.99.0
 Authors@R: c(
     person("Fayrouz", "Hammal", email = "fayrouz.hammal@petermac.org", 
            role = c("aut", "cre"),
@@ -52,6 +52,6 @@ biocViews: Lipidomics, MassSpectrometry, Normalization,
     DifferentialExpression, GeneSetEnrichment, Visualization,
     ShinyApps, MultipleComparison
 RoxygenNote: 7.3.3
-URL: https://github.com/hammalfayrouz/LIPIDIFy
-BugReports: https://github.com/hammalfayrouz/LIPIDIFy/issues
+URL: https://github.com/fayrouzhammal/LIPIDIFy
+BugReports: https://github.com/fayrouzhammal/LIPIDIFy/issues
 Config/testthat/edition: 3

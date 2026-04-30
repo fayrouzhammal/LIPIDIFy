@@ -1,4 +1,7 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^inputs$
+^.*\.Rproj$
+^\.DS_Store$
+^.*\.DS_Store$
 ^LICENSE\.md$
