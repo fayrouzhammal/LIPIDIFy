@@ -7,11 +7,11 @@
 normalize_median(data)
 }
 \arguments{
-\item{data}{Numeric data matrix (samples as rows)}
+\item{data}{Numeric matrix (samples as rows, lipids as columns).}
 }
 \value{
-Median normalized data
+Median-normalized matrix.
 }
 \description{
-Median Normalization
+Scales each sample so its median equals the global median across all samples.
 }

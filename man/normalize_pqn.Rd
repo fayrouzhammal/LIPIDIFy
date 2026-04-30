@@ -7,11 +7,12 @@
 normalize_pqn(data)
 }
 \arguments{
-\item{data}{Numeric data matrix (samples as rows)}
+\item{data}{Numeric matrix (samples as rows, lipids as columns).}
 }
 \value{
-PQN normalized data
+PQN-normalized matrix.
 }
 \description{
-PQN Normalization
+Probabilistic Quotient Normalization. Uses the per-feature median across
+samples as the reference spectrum.
 }

@@ -2,25 +2,24 @@
 % Please edit documentation in R/utils.R
 \name{export_classification}
 \alias{export_classification}
-\title{Export Lipid Classification}
+\title{Export Lipid Classification to CSV}
 \usage{
 export_classification(classification, file_path)
 }
 \arguments{
-\item{classification}{Data frame with lipid classifications}
+\item{classification}{Data frame with lipid classifications.}
 
-\item{file_path}{Output file path}
+\item{file_path}{Output file path.}
 }
 \value{
-Invisibly returns TRUE on success
+Invisibly returns \code{TRUE} on success.
 }
 \description{
-Exports the lipid classification to a CSV file.
+Export Lipid Classification to CSV
 }
 \examples{
 \dontrun{
-lipids <- c("PC 16:0_18:1", "PE 18:0_20:4")
-classification <- classify_lipids(lipids)
-export_classification(classification, "lipid_classification.csv")
+cls <- classify_lipids(c("PC 16:0_18:1", "PE 18:0_20:4"))
+export_classification(cls, "lipid_classification.csv")
 }
 }

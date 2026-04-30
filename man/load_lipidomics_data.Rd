@@ -10,13 +10,20 @@ load_lipidomics_data(
 )
 }
 \arguments{
-\item{file_path}{Path to the lipidomics data file}
+\item{file_path}{Path to the lipidomics data file (CSV format).}
 
-\item{metadata_columns}{Vector of metadata column names}
+\item{metadata_columns}{Character vector of expected metadata column names.}
 }
 \value{
-List containing data matrix and metadata
+A named list with components: \code{data} (original data frame),
+  \code{metadata} (metadata data frame), \code{numeric_data} (numeric matrix).
 }
 \description{
-Load Lipidomics Data
+Reads a CSV file and separates metadata columns from numeric lipid abundance columns.
+}
+\examples{
+\dontrun{
+loaded <- load_lipidomics_data("my_data.csv")
+dim(loaded$numeric_data)
+}
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/visualization.R
 \name{create_enrichment_barplot}
 \alias{create_enrichment_barplot}
-\title{Create Enrichment Barplot - FIXED terminology}
+\title{Create an Enrichment Barplot}
 \usage{
 create_enrichment_barplot(
   enrichment_data,
@@ -11,15 +11,15 @@ create_enrichment_barplot(
 )
 }
 \arguments{
-\item{enrichment_data}{Enrichment results data frame}
+\item{enrichment_data}{Data frame of fgsea results.}
 
-\item{title}{Plot title}
+\item{title}{Plot title.}
 
-\item{max_pathways}{Maximum number of pathways to show}
+\item{max_pathways}{Maximum number of pathways (top by p-value).}
 }
 \value{
-ggplot object
+A \code{ggplot2} object.
 }
 \description{
-Create Enrichment Barplot - FIXED terminology
+Create an Enrichment Barplot
 }

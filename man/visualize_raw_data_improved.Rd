@@ -2,27 +2,45 @@
 % Please edit documentation in R/visualization.R
 \name{visualize_raw_data_improved}
 \alias{visualize_raw_data_improved}
-\title{Visualize Raw Data with Sample/Lipid Toggle}
+\title{Visualize Raw or Normalized Data with Sample/Lipid Toggle}
 \usage{
 visualize_raw_data_improved(
   data_list,
   plot_type = "boxplot",
   view_mode = "sample",
-  top_n = 30
+  top_n = 30,
+  metadata = NULL,
+  group_column = "Sample Group"
 )
 }
 \arguments{
-\item{data_list}{List containing data components; must include $numeric_data (samples x lipids)}
+\item{data_list}{List with \code{$numeric_data} (samples \eqn{\times}
+lipids matrix).}
 
-\item{plot_type}{Type of plot ("boxplot", "violin", "density", "histogram")}
+\item{plot_type}{One of \code{"boxplot"}, \code{"violin"}, \code{"density"},
+or \code{"histogram"}.}
 
-\item{view_mode}{Either "sample" or "lipid"}
+\item{view_mode}{Either \code{"sample"} or \code{"lipid"}.}
 
-\item{top_n}{Number of top variable lipids to show (for lipid mode)}
+\item{top_n}{Integer. Number of top-variable lipids to show in lipid mode.}
+
+\item{metadata}{Optional metadata data frame (same row order as
+\code{numeric_data}) used to colour samples by group when
+\code{group_column} is provided.}
+
+\item{group_column}{Name of the group column in \code{metadata}.}
 }
 \value{
-ggplot object
+A \code{ggplot2} object.
 }
 \description{
-Visualize Raw Data with Sample/Lipid Toggle
+Extended visualization that can show data from the sample perspective
+(one boxplot/violin/density per sample) or the lipid perspective (top
+variable lipids).
+}
+\examples{
+\dontrun{
+dl <- load_lipidomics_data_from_df(generate_example_data())
+visualize_raw_data_improved(dl, "boxplot", "sample")
+}
 }

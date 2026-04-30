@@ -2,22 +2,20 @@
 % Please edit documentation in R/utils.R
 \name{get_lipid_classification}
 \alias{get_lipid_classification}
-\title{Get Lipid Classification from Names}
+\title{Get Lipid Classification}
 \usage{
 get_lipid_classification(lipid_names)
 }
 \arguments{
-\item{lipid_names}{Vector of lipid names to classify}
+\item{lipid_names}{Character vector of lipid names.}
 }
 \value{
-Data frame with lipid classifications (Lipid, LipidGroup, LipidType, Saturation)
+Data frame with columns \code{Lipid}, \code{LipidGroup},
+  \code{LipidType}, and \code{Saturation}.
 }
 \description{
-Wrapper function to classify lipids and return the classification data frame.
-This function is exported for use in scripts.
+Wrapper around \code{classify_lipids} for convenient scripting use.
 }
 \examples{
-lipids <- c("PC 16:0_18:1", "PE 18:0_20:4", "TG 16:0_18:1_20:4")
-classification <- get_lipid_classification(lipids)
-print(classification)
+get_lipid_classification(c("PC 16:0_18:1", "PE 18:0_20:4"))
 }

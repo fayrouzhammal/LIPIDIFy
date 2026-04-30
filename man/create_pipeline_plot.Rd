@@ -2,18 +2,33 @@
 % Please edit documentation in R/visualization.R
 \name{create_pipeline_plot}
 \alias{create_pipeline_plot}
-\title{Create a quick QC plot for a normalization pipeline}
+\title{Quick QC Plot for a Normalized Data Matrix}
 \usage{
-create_pipeline_plot(data_matrix, title = "Normalization pipeline")
+create_pipeline_plot(
+  data_matrix,
+  title = "Normalization Pipeline",
+  metadata = NULL,
+  group_column = "Sample Group",
+  plot_type = "boxplot"
+)
 }
 \arguments{
-\item{data_matrix}{Numeric matrix or data.frame with samples in rows and lipids in columns.}
+\item{data_matrix}{Numeric matrix or data frame (samples as rows,
+lipids as columns).}
 
-\item{title}{Title to display above the plot.}
+\item{title}{Plot title string.}
+
+\item{metadata}{Optional metadata data frame (same row order) for group
+colouring.}
+
+\item{group_column}{Name of the group column in \code{metadata}.}
+
+\item{plot_type}{One of \code{"boxplot"}, \code{"violin"}, or
+\code{"density"}. Defaults to \code{"boxplot"}.}
 }
 \value{
-A ggplot2 object (boxplots of intensities per sample).
+A \code{ggplot2} object.
 }
 \description{
-Create a quick QC plot for a normalization pipeline
+Quick QC Plot for a Normalized Data Matrix
 }

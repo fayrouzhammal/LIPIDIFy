@@ -111,12 +111,47 @@ load_lipidomics_data_from_df <- function(data_df, metadata_columns = c("Sample N
     data_df <- data_df[!grepl("PBQC", data_df$`Sample Group`, ignore.case = TRUE), ]
   }
   
-  # Separate metadata and numeric data
-  metadata <- data_df[, names(data_df) %in% metadata_columns, drop = FALSE]
-  numeric_data <- data_df[, !names(data_df) %in% metadata_columns, drop = FALSE]
+  # --- FIX: Robust metadata/numeric separation ---
+  # Start with user-specified metadata columns
+  metadata_cols <- names(data_df)[names(data_df) %in% metadata_columns]
   
-  # Convert to matrix
+  # Identify candidate numeric columns (those NOT in metadata_columns)
+  candidate_numeric_cols <- names(data_df)[!names(data_df) %in% metadata_columns]
+  
+  # Also move any non-numeric columns into metadata (fallback by column type)
+  actually_numeric <- sapply(candidate_numeric_cols, function(col) {
+    # Check if column can be coerced to numeric without becoming all NA
+    suppressWarnings({
+      numeric_vals <- as.numeric(data_df[[col]])
+      !all(is.na(numeric_vals))
+    })
+  })
+  
+  # Columns that fail numeric coercion go to metadata
+  non_numeric_cols <- candidate_numeric_cols[!actually_numeric]
+  numeric_cols <- candidate_numeric_cols[actually_numeric]
+  
+  # Combine all metadata columns
+  all_metadata_cols <- unique(c(metadata_cols, non_numeric_cols))
+  
+  # Separate metadata and numeric data
+  metadata <- data_df[, names(data_df) %in% all_metadata_cols, drop = FALSE]
+  numeric_data <- data_df[, numeric_cols, drop = FALSE]
+  
+  # --- FIX: Explicitly coerce each numeric column to numeric ---
+  for (col in names(numeric_data)) {
+    numeric_data[[col]] <- as.numeric(numeric_data[[col]])
+  }
+  
+  # --- FIX: Drop columns that are all NA after coercion ---
+  all_na_cols <- sapply(numeric_data, function(x) all(is.na(x)))
+  if (any(all_na_cols)) {
+    numeric_data <- numeric_data[, !all_na_cols, drop = FALSE]
+  }
+  
+  # --- FIX: Convert to matrix only after ensuring all columns are numeric ---
   numeric_data <- as.matrix(numeric_data)
+  storage.mode(numeric_data) <- "numeric"
   
   # Set rownames based on Sample Name
   if ("Sample Name" %in% colnames(metadata)) {
@@ -150,4 +185,3 @@ load_lipidomics_data_from_df <- function(data_df, metadata_columns = c("Sample N
 example_lipidomics_data <- function() {
   generate_example_data()
 }
-

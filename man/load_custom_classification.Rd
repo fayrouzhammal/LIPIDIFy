@@ -2,19 +2,19 @@
 % Please edit documentation in R/utils.R
 \name{load_custom_classification}
 \alias{load_custom_classification}
-\title{Load Custom Lipid Classification}
+\title{Load Custom Lipid Classification from a CSV File}
 \usage{
 load_custom_classification(file_path)
 }
 \arguments{
-\item{file_path}{Path to the CSV file containing lipid classifications}
+\item{file_path}{Path to a CSV file with a \code{Lipid} column followed by
+one or more classification columns.}
 }
 \value{
-Data frame with lipid names and their classifications
+Data frame with \code{Lipid} as the first column.
 }
 \description{
-Loads a custom lipid classification from a CSV file. The file should have
-a 'Lipid' column followed by one or more classification columns.
+Load Custom Lipid Classification from a CSV File
 }
 \examples{
 \dontrun{

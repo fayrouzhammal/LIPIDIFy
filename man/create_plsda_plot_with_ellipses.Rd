@@ -2,27 +2,32 @@
 % Please edit documentation in R/visualization.R
 \name{create_plsda_plot_with_ellipses}
 \alias{create_plsda_plot_with_ellipses}
-\title{Create PLS-DA Plot with Optional Ellipses}
+\title{Create a PLS-DA Plot with Optional Ellipses}
 \usage{
 create_plsda_plot_with_ellipses(
   plsda_data,
   ellipse_type = "none",
   confidence_level = 0.95,
-  title = "PLS-DA Analysis"
+  title = "PLS-DA Analysis",
+  show_sample_labels = FALSE
 )
 }
 \arguments{
-\item{plsda_data}{Data frame with Comp1, Comp2, and Group columns}
+\item{plsda_data}{Data frame with columns \code{Comp1}, \code{Comp2},
+\code{Group}, and (optionally) \code{Sample}.}
 
-\item{ellipse_type}{Type of ellipse: "none", "confidence", or "visual"}
+\item{ellipse_type}{One of \code{"none"}, \code{"confidence"}, or
+\code{"visual"}.}
 
-\item{confidence_level}{Confidence level for confidence ellipses (default 0.95)}
+\item{confidence_level}{Numeric confidence level (default \code{0.95}).}
 
-\item{title}{Plot title}
+\item{title}{Plot title.}
+
+\item{show_sample_labels}{Logical. Show sample name labels if \code{TRUE}.}
 }
 \value{
-ggplot object
+A \code{ggplot2} object.
 }
 \description{
-Create PLS-DA Plot with Optional Ellipses
+Create a PLS-DA Plot with Optional Ellipses
 }

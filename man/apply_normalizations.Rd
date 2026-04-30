@@ -2,18 +2,24 @@
 % Please edit documentation in R/utils.R
 \name{apply_normalizations}
 \alias{apply_normalizations}
-\title{Apply Multiple Normalizations}
+\title{Apply a Sequence of Normalization Methods}
 \usage{
 apply_normalizations(data, methods)
 }
 \arguments{
-\item{data}{Numeric data matrix}
+\item{data}{Numeric matrix with samples in rows and lipids in columns.}
 
-\item{methods}{Vector of normalization methods to apply in order}
+\item{methods}{Character vector of method names as returned by
+\code{get_normalization_methods()}.}
 }
 \value{
-Normalized data matrix
+Normalized numeric matrix of the same dimensions as \code{data}.
 }
 \description{
-Apply Multiple Normalizations
+Applies normalization methods in the order supplied, passing the output of
+each step as the input to the next.
+}
+\examples{
+m <- matrix(rlnorm(60, 8, 1), nrow = 6, ncol = 10)
+apply_normalizations(m, c("TIC", "Log2"))
 }

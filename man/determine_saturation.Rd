@@ -2,16 +2,23 @@
 % Please edit documentation in R/utils.R
 \name{determine_saturation}
 \alias{determine_saturation}
-\title{Enhanced Saturation Determination Function}
+\title{Determine Fatty-Acid Saturation from a Lipid Name}
 \usage{
 determine_saturation(lipid_name)
 }
 \arguments{
-\item{lipid_name}{Single lipid name}
+\item{lipid_name}{A single character string with the lipid name.}
 }
 \value{
-Saturation classification (SFA, MUFA, PUFA, or Unclassified)
+One of \code{"SFA"}, \code{"MUFA"}, \code{"PUFA"}, or
+  \code{"Unclassified"}.
 }
 \description{
-Enhanced Saturation Determination Function
+Parses standard lipid name notation to count double bonds and classifies the
+species as SFA (0 double bonds), MUFA (1) or PUFA (>1).
+}
+\examples{
+determine_saturation("PC 16:0_18:1")   # "MUFA"
+determine_saturation("PE 18:0_18:0")   # "SFA"
+determine_saturation("TG 16:0_18:1_20:4") # "PUFA"
 }

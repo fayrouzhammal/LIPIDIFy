@@ -2,16 +2,19 @@
 % Please edit documentation in R/shiny_app.R
 \name{launch_lipidomics_app}
 \alias{launch_lipidomics_app}
-\title{Launch Lipidomics Analyser Shiny App (FULLY CORRECTED VERSION)}
+\title{Launch the LIPIDIFy Shiny Application}
 \usage{
 launch_lipidomics_app(port = NULL)
 }
 \arguments{
-\item{port}{Port number for the Shiny app}
+\item{port}{Integer. Port number for the Shiny server. \code{NULL} lets
+Shiny pick a free port automatically.}
 }
 \value{
-Launches the Shiny application
+Launches the Shiny application (does not return a value).
 }
 \description{
-Launch Lipidomics Analyser Shiny App (FULLY CORRECTED VERSION)
+Starts an interactive Shiny dashboard for end-to-end lipidomics analysis,
+including data upload, lipid classification, normalization, differential
+analysis, enrichment analysis, and report generation.
 }

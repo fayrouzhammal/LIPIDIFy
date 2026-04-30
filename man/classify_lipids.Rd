@@ -2,16 +2,21 @@
 % Please edit documentation in R/utils.R
 \name{classify_lipids}
 \alias{classify_lipids}
-\title{Classify Lipids Based on Names}
+\title{Classify Lipids Based on Their Names}
 \usage{
 classify_lipids(lipid_names)
 }
 \arguments{
-\item{lipid_names}{Vector of lipid names}
+\item{lipid_names}{Character vector of lipid names.}
 }
 \value{
-Data frame with classification results
+Data frame with columns \code{Lipid}, \code{LipidGroup},
+  \code{LipidType}, and \code{Saturation}.
 }
 \description{
-Classify Lipids Based on Names
+Classifies a vector of lipid names into lipid group, type, and saturation
+category using regular-expression pattern matching.
+}
+\examples{
+classify_lipids(c("PC 16:0_18:1", "TG 16:0_18:1_20:4", "Cer 16:0"))
 }

@@ -15,40 +15,43 @@ Description: Provides a comprehensive toolkit for lipidomics data analysis,
     classification schemes and custom enrichment sets.
 License: MIT + file LICENSE
 Encoding: UTF-8
-LazyData: true
+LazyData: false
 Depends:
-    R (>= 4.3.0)
+    R (>= 4.4.0)
 Imports:
-    shiny (>= 1.7.0),
-    shinydashboard (>= 0.7.0),
-    DT (>= 0.27),
-    plotly (>= 4.10.0),
-    ggplot2 (>= 3.4.0),
-    ggrepel (>= 0.9.0),
+    shiny (>= 1.8.0),
+    shinydashboard,
+    ggplot2 (>= 3.5.0),
+    ggrepel,
+    plotly,
+    DT,
+    tidyr,
+    dplyr,
+    scales,
+    gridExtra,
+    grid,
+    pheatmap,
     limma,
     edgeR,
-    fgsea (>= 1.20.0),
-    FactoMineR (>= 2.7),
-    pls (>= 2.8.0),
-    tidyr (>= 1.3.0),
-    stringr (>= 1.5.0),
-    openxlsx (>= 4.2.0),
-    pheatmap (>= 1.0.12),
-    grid,
-    grDevices,
-    stats,
-    utils,
-    gridExtra (>= 2.3),
-    scales (>= 1.2.0)
-Suggests:
-    knitr,
+    fgsea,
+    FactoMineR,
+    pls,
+    openxlsx,
     rmarkdown,
+    stringr,
+    utils,
+    stats,
+    grDevices
+Suggests:
+    BiocStyle,
+    knitr,
     testthat (>= 3.0.0),
-    BiocStyle
+    devtools
 VignetteBuilder: knitr
-biocViews: Lipidomics, Metabolomics, DifferentialExpression, 
-    Normalization, Visualization, Software, GeneSetEnrichment
+biocViews: Lipidomics, MassSpectrometry, Normalization,
+    DifferentialExpression, GeneSetEnrichment, Visualization,
+    ShinyApps, MultipleComparison
 RoxygenNote: 7.3.3
-URL: https://github.com/yourusername/LIPIDIFy
-BugReports: https://github.com/yourusername/LIPIDIFy/issues
+URL: https://github.com/hammalfayrouz/LIPIDIFy
+BugReports: https://github.com/hammalfayrouz/LIPIDIFy/issues
 Config/testthat/edition: 3

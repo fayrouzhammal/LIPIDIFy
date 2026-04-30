@@ -2,16 +2,21 @@
 % Please edit documentation in R/utils.R
 \name{test_saturation_classification}
 \alias{test_saturation_classification}
-\title{Test function to check saturation classification}
+\title{Test Saturation Classification}
 \usage{
 test_saturation_classification(test_lipids = NULL)
 }
 \arguments{
-\item{test_lipids}{Vector of test lipid names}
+\item{test_lipids}{Optional character vector of lipid names to test.
+If \code{NULL}, a built-in test set is used.}
 }
 \value{
-Data frame showing classification results
+A data frame with columns \code{Lipid} and \code{Saturation},
+  printed to the console and returned invisibly.
 }
 \description{
-Test function to check saturation classification
+Convenience function to verify saturation detection on a set of lipid names.
+}
+\examples{
+test_saturation_classification()
 }

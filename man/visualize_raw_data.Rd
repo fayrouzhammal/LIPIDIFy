@@ -7,13 +7,22 @@
 visualize_raw_data(data_list, plot_type = "boxplot")
 }
 \arguments{
-\item{data_list}{List containing data components from load_lipidomics_data}
+\item{data_list}{List as returned by \code{load_lipidomics_data} or
+\code{load_lipidomics_data_from_df}, must contain \code{$numeric_data}.}
 
-\item{plot_type}{Type of plot ("boxplot", "density", "histogram")}
+\item{plot_type}{One of \code{"boxplot"}, \code{"density"}, or
+\code{"histogram"}.}
 }
 \value{
-ggplot object
+A \code{ggplot2} object.
 }
 \description{
-Visualize Raw Data
+Produces a simple per-sample boxplot, density, or histogram of raw
+lipidomics intensities.
+}
+\examples{
+\dontrun{
+dl <- load_lipidomics_data_from_df(generate_example_data())
+visualize_raw_data(dl, "boxplot")
+}
 }

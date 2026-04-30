@@ -2,7 +2,7 @@
 % Please edit documentation in R/visualization.R
 \name{create_volcano_plot_labeled}
 \alias{create_volcano_plot_labeled}
-\title{Create Volcano Plot with Labels - FIXED: Only color SIGNIFICANT lipids by classification}
+\title{Create a Volcano Plot with Optional Classification Colouring}
 \usage{
 create_volcano_plot_labeled(
   results,
@@ -15,23 +15,28 @@ create_volcano_plot_labeled(
 )
 }
 \arguments{
-\item{results}{Differential analysis results data frame}
+\item{results}{Data frame of differential analysis results (must have
+columns \code{logFC} and \code{adj.P.Val}; row names = lipid names).}
 
-\item{title}{Plot title}
+\item{title}{Plot title.}
 
-\item{logfc_threshold}{Log fold change threshold for significance}
+\item{logfc_threshold}{Absolute log-fold-change threshold.}
 
-\item{pval_threshold}{P-value threshold for significance}
+\item{pval_threshold}{Adjusted p-value threshold.}
 
-\item{top_labels}{Number of top features to label}
+\item{top_labels}{Number of top significant lipids to label.}
 
-\item{classification_data}{Optional classification data for coloring}
+\item{classification_data}{Optional classification data frame with a
+\code{Lipid} column.}
 
-\item{color_by}{Column to use for coloring (if classification_data provided)}
+\item{color_by}{Column in \code{classification_data} to use for colouring.}
 }
 \value{
-ggplot object
+A \code{ggplot2} object.
 }
 \description{
-Create Volcano Plot with Labels - FIXED: Only color SIGNIFICANT lipids by classification
+Significant lipids (adj.P.Val < \code{pval_threshold} AND
+|logFC| > \code{logfc_threshold}) are coloured; non-significant points
+are grey. When \code{classification_data} is supplied, significant lipids
+are coloured by the selected classification column.
 }

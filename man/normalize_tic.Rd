@@ -7,11 +7,12 @@
 normalize_tic(data)
 }
 \arguments{
-\item{data}{Numeric data matrix (samples as rows)}
+\item{data}{Numeric matrix (samples as rows, lipids as columns).}
 }
 \value{
-TIC normalized data
+TIC-normalized matrix of the same dimensions.
 }
 \description{
-TIC Normalization
+Divides each sample by its total ion current (row sum) and rescales to the
+global mean TIC.
 }

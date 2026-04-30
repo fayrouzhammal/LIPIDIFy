@@ -1,0 +1,11 @@
+citHeader("To cite LIPIDIFy in publications, please use:")
+
+bibentry(
+  bibtype  = "Manual",
+  title    = "LIPIDIFy: An Interactive R Package for End-to-End Lipidomics Analysis",
+  author   = person("Fayrouz", "Hammal", role = c("aut", "cre")),
+  year     = format(Sys.Date(), "%Y"),
+  note     = paste0("R package version 0.99.0"),
+  url      = "https://github.com/hammalfayrouz/LIPIDIFy",
+  key      = "LIPIDIFy"
+)

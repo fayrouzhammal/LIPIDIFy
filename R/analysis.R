@@ -38,17 +38,42 @@ perform_differential_analysis_limma <- function(data_matrix, metadata, group_col
     data_matrix <- t(data_matrix)
   }
   
-  # Create design matrix
-  groups <- factor(metadata[[group_column]])
+  # --- FIX: Store original group labels for UI/display ---
+  original_groups <- as.character(metadata[[group_column]])
+  original_levels <- unique(original_groups)
+  
+  # --- FIX: Create sanitized group factor using make.names() ---
+  sanitized_groups <- make.names(original_groups)
+  sanitized_levels <- make.names(original_levels)
+  
+  # Create mapping from original to sanitized
+  level_mapping <- sanitized_levels
+  names(level_mapping) <- original_levels
+  reverse_mapping <- original_levels
+  names(reverse_mapping) <- sanitized_levels
+  
+  # Create design matrix using sanitized levels
+  groups <- factor(sanitized_groups, levels = sanitized_levels)
   design <- stats::model.matrix(~ 0 + groups)
-  colnames(design) <- levels(groups)
+  colnames(design) <- sanitized_levels
   
   # Fit linear model
   fit <- limma::lmFit(data_matrix, design)
   
-  # If no contrasts specified, create default contrasts
+  # If no contrasts specified, create default contrasts (using sanitized names)
   if (is.null(contrasts_list)) {
-    contrasts_list <- create_default_contrasts(levels(groups))
+    contrasts_list <- create_default_contrasts(sanitized_levels)
+  } else {
+    # --- FIX: Convert user-provided contrasts to sanitized names ---
+    contrasts_list <- sapply(contrasts_list, function(contrast) {
+      for (orig in original_levels) {
+        sanitized <- level_mapping[[orig]]
+        # Replace whole word matches only
+        contrast <- gsub(paste0("\\b", gsub("([.|()\\^{}+$*?]|\\[|\\])", "\\\\\\1", orig), "\\b"), 
+                         sanitized, contrast)
+      }
+      return(contrast)
+    }, USE.NAMES = FALSE)
   }
   
   # Create contrast matrix
@@ -60,9 +85,18 @@ perform_differential_analysis_limma <- function(data_matrix, metadata, group_col
   
   # Extract results for each contrast
   results <- list()
+  original_contrast_names <- colnames(contrast_matrix)
+  
   for (i in 1:ncol(contrast_matrix)) {
-    contrast_name <- colnames(contrast_matrix)[i]
-    results[[contrast_name]] <- limma::topTable(fit2, coef = i, number = Inf, adjust.method = "fdr")
+    # --- FIX: Convert contrast names back to original labels for display ---
+    contrast_name <- original_contrast_names[i]
+    display_name <- contrast_name
+    for (sanitized in sanitized_levels) {
+      orig <- reverse_mapping[[sanitized]]
+      display_name <- gsub(paste0("\\b", sanitized, "\\b"), orig, display_name)
+    }
+    
+    results[[display_name]] <- limma::topTable(fit2, coef = i, number = Inf, adjust.method = "fdr")
   }
   
   return(list(
@@ -70,7 +104,9 @@ perform_differential_analysis_limma <- function(data_matrix, metadata, group_col
     results = results,
     design = design,
     contrasts = contrast_matrix,
-    method = "limma"
+    method = "limma",
+    level_mapping = level_mapping,
+    reverse_mapping = reverse_mapping
   ))
 }
 
@@ -98,8 +134,22 @@ perform_differential_analysis_edger <- function(data_matrix, metadata, group_col
   data_matrix <- round(data_matrix)
   data_matrix[data_matrix < 0] <- 0  # Ensure no negative values
   
-  # Create groups factor
-  groups <- factor(metadata[[group_column]])
+  # --- FIX: Store original group labels for UI/display ---
+  original_groups <- as.character(metadata[[group_column]])
+  original_levels <- unique(original_groups)
+  
+  # --- FIX: Create sanitized group factor using make.names() ---
+  sanitized_groups <- make.names(original_groups)
+  sanitized_levels <- make.names(original_levels)
+  
+  # Create mapping from original to sanitized
+  level_mapping <- sanitized_levels
+  names(level_mapping) <- original_levels
+  reverse_mapping <- original_levels
+  names(reverse_mapping) <- sanitized_levels
+  
+  # Create groups factor using sanitized levels
+  groups <- factor(sanitized_groups, levels = sanitized_levels)
   
   # Create DGEList object
   dge <- edgeR::DGEList(counts = data_matrix, group = groups)
@@ -107,13 +157,24 @@ perform_differential_analysis_edger <- function(data_matrix, metadata, group_col
   # Estimate dispersion
   dge <- edgeR::estimateDisp(dge)
   
-  # Create design matrix
-  design <- model.matrix(~ 0 + groups)
-  colnames(design) <- levels(groups)
+  # Create design matrix using sanitized levels
+  design <- stats::model.matrix(~ 0 + groups)
+  colnames(design) <- sanitized_levels
   
-  # If no contrasts specified, create default contrasts
+  # If no contrasts specified, create default contrasts (using sanitized names)
   if (is.null(contrasts_list)) {
-    contrasts_list <- create_default_contrasts(levels(groups))
+    contrasts_list <- create_default_contrasts(sanitized_levels)
+  } else {
+    # --- FIX: Convert user-provided contrasts to sanitized names ---
+    contrasts_list <- sapply(contrasts_list, function(contrast) {
+      for (orig in original_levels) {
+        sanitized <- level_mapping[[orig]]
+        # Replace whole word matches only
+        contrast <- gsub(paste0("\\b", gsub("([.|()\\^{}+$*?]|\\[|\\])", "\\\\\\1", orig), "\\b"), 
+                         sanitized, contrast)
+      }
+      return(contrast)
+    }, USE.NAMES = FALSE)
   }
   
   # Create contrast matrix
@@ -124,8 +185,17 @@ perform_differential_analysis_edger <- function(data_matrix, metadata, group_col
   
   # Extract results for each contrast
   results <- list()
+  original_contrast_names <- colnames(contrast_matrix)
+  
   for (i in 1:ncol(contrast_matrix)) {
-    contrast_name <- colnames(contrast_matrix)[i]
+    # --- FIX: Convert contrast names back to original labels for display ---
+    contrast_name <- original_contrast_names[i]
+    display_name <- contrast_name
+    for (sanitized in sanitized_levels) {
+      orig <- reverse_mapping[[sanitized]]
+      display_name <- gsub(paste0("\\b", sanitized, "\\b"), orig, display_name)
+    }
+    
     qlf <- edgeR::glmQLFTest(fit, contrast = contrast_matrix[, i])
     
     # Extract results in similar format to limma
@@ -136,7 +206,7 @@ perform_differential_analysis_edger <- function(data_matrix, metadata, group_col
     colnames(res)[colnames(res) == "PValue"] <- "P.Value"
     colnames(res)[colnames(res) == "FDR"] <- "adj.P.Val"
     
-    results[[contrast_name]] <- res
+    results[[display_name]] <- res
   }
   
   return(list(
@@ -144,11 +214,17 @@ perform_differential_analysis_edger <- function(data_matrix, metadata, group_col
     results = results,
     design = design,
     contrasts = contrast_matrix,
-    method = "edger"
+    method = "edger",
+    level_mapping = level_mapping,
+    reverse_mapping = reverse_mapping
   ))
 }
 
 #' Create Default Contrasts
+#'
+#' Creates default pairwise contrasts from group levels. If the levels contain
+#' special characters that are invalid for limma/edgeR, they should already
+#' be sanitized before calling this function.
 #'
 #' @param group_levels Character vector of group level names (e.g., c("Control","Treatment","Resistant"))
 #' @return Character vector of limma-style contrast strings (e.g., "Treatment - Control")
@@ -160,10 +236,16 @@ create_default_contrasts <- function(group_levels) {
   group_levels <- unique(group_levels[!is.na(group_levels)])
   if (length(group_levels) < 2) return(character(0))
   
+  # --- FIX: Ensure levels are valid R names for makeContrasts ---
+  # Note: This function now expects already-sanitized levels from the caller,
+  
+  # but we add a safeguard here for direct usage
+  safe_levels <- make.names(group_levels)
+  
   contrasts <- c()
-  for (i in 1:(length(group_levels) - 1)) {
-    for (j in (i + 1):length(group_levels)) {
-      contrasts <- c(contrasts, paste0(group_levels[j], " - ", group_levels[i]))
+  for (i in 1:(length(safe_levels) - 1)) {
+    for (j in (i + 1):length(safe_levels)) {
+      contrasts <- c(contrasts, paste0(safe_levels[j], " - ", safe_levels[i]))
     }
   }
   contrasts
@@ -186,7 +268,7 @@ perform_enrichment_analysis <- function(results_list, classification_data,
   enrichment_results <- list()
   
   for (contrast_name in names(results_list)) {
-    cat("Processing enrichment for:", contrast_name, "\n")
+    message("Processing enrichment for: ", contrast_name)
     
     results <- results_list[[contrast_name]]
     
@@ -412,13 +494,13 @@ perform_plsda <- function(data_matrix, metadata, group_column = "Sample Group", 
   tryCatch({
     # CRITICAL FIX: Ensure it's a matrix, not a data.frame or list
     if (!is.matrix(data_matrix)) {
-      cat("Converting data to matrix\n")
+      message("Converting data to matrix")
       data_matrix <- as.matrix(data_matrix)
     }
     
     # Ensure data is in correct format (samples as rows)
     if (ncol(data_matrix) < nrow(data_matrix)) {
-      cat("Transposing data matrix for PLS-DA\n")
+      message("Transposing data matrix for PLS-DA")
       data_matrix <- t(data_matrix)
     }
     
@@ -426,8 +508,8 @@ perform_plsda <- function(data_matrix, metadata, group_column = "Sample Group", 
     var_cols <- apply(data_matrix, 2, stats::var, na.rm = TRUE) > 0
     data_matrix <- data_matrix[, var_cols, drop = FALSE]
     
-    cat("PLS-DA data matrix dimensions:", dim(data_matrix), "\n")
-    cat("PLS-DA metadata dimensions:", dim(metadata), "\n")
+    message("PLS-DA data matrix dimensions: ", paste(dim(data_matrix), collapse = " x "))
+    message("PLS-DA metadata dimensions: ", paste(dim(metadata), collapse = " x "))
     
     # Prepare data
     groups <- factor(metadata[[group_column]])
@@ -444,13 +526,13 @@ perform_plsda <- function(data_matrix, metadata, group_column = "Sample Group", 
     }
     
     # Create dummy variables for groups
-    group_dummy <- model.matrix(~ groups - 1)
+    group_dummy <- stats::model.matrix(~ groups - 1)
     
-    # Handle column naming for model.matrix output
+    # Handle column naming for stats::model.matrix() output
     colnames(group_dummy) <- paste0("Group_", levels(groups))
     
-    cat("Group dummy matrix dimensions:", dim(group_dummy), "\n")
-    cat("Unique groups:", levels(groups), "\n")
+    message("Group dummy matrix dimensions: ", paste(dim(group_dummy), collapse = " x "))
+    message("Unique groups: ", paste(levels(groups), collapse = ", "))
     
     # Perform PLS-DA using pls package
     plsda_results <- pls::plsr(group_dummy ~ data_matrix, ncomp = n_comp, validation = "LOO")
@@ -475,7 +557,7 @@ perform_plsda <- function(data_matrix, metadata, group_column = "Sample Group", 
       ggplot2::theme_minimal() +
       ggplot2::theme(legend.position = "bottom")
     
-    cat("PLS-DA completed successfully\n")
+    message("PLS-DA completed successfully")
     
     return(list(
       plsda_results = plsda_results,
@@ -484,7 +566,7 @@ perform_plsda <- function(data_matrix, metadata, group_column = "Sample Group", 
     ))
     
   }, error = function(e) {
-    cat("PLS-DA failed with error:", e$message, "\n")
+    message("PLS-DA failed with error: ", e$message)
     warning(paste("PLS-DA failed:", e$message))
     
     # Fallback: create simple plot showing error

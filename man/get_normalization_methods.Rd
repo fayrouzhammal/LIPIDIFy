@@ -2,13 +2,17 @@
 % Please edit documentation in R/utils.R
 \name{get_normalization_methods}
 \alias{get_normalization_methods}
-\title{Get Available Normalization Methods}
+\title{Return Available Normalization Method Names}
 \usage{
 get_normalization_methods()
 }
 \value{
-Vector of normalization method names
+Character vector of normalization method names supported by
+  \code{apply_normalizations}.
 }
 \description{
-Get Available Normalization Methods
+Return Available Normalization Method Names
+}
+\examples{
+get_normalization_methods()
 }

@@ -2,30 +2,39 @@
 % Please edit documentation in R/visualization.R
 \name{create_pca_plot_with_ellipses}
 \alias{create_pca_plot_with_ellipses}
-\title{Create PCA Plot with Optional Ellipses}
+\title{Create a PCA Plot with Optional Confidence or Visual Ellipses}
 \usage{
 create_pca_plot_with_ellipses(
   pca_data,
   variance_explained,
   ellipse_type = "none",
   confidence_level = 0.95,
-  title = "PCA Analysis"
+  title = "PCA Analysis",
+  show_sample_labels = FALSE
 )
 }
 \arguments{
-\item{pca_data}{Data frame with PC1, PC2, and Group columns}
+\item{pca_data}{Data frame with columns \code{PC1}, \code{PC2}, \code{Group}
+and (optionally) \code{Sample} for point labels.}
 
-\item{variance_explained}{Vector of variance explained by PC1 and PC2}
+\item{variance_explained}{Numeric vector of length \eqn{\ge 2} with the
+percent variance explained by PC1 and PC2.}
 
-\item{ellipse_type}{Type of ellipse: "none", "confidence", or "visual"}
+\item{ellipse_type}{One of \code{"none"}, \code{"confidence"}, or
+\code{"visual"}.}
 
-\item{confidence_level}{Confidence level for confidence ellipses (default 0.95)}
+\item{confidence_level}{Numeric confidence level for \code{"confidence"}
+ellipses (default \code{0.95}).}
 
-\item{title}{Plot title}
+\item{title}{Plot title.}
+
+\item{show_sample_labels}{Logical. If \code{TRUE}, sample names are shown
+as text labels next to each point.}
 }
 \value{
-ggplot object
+A \code{ggplot2} object.
 }
 \description{
-Create PCA Plot with Optional Ellipses
+The colour/fill legends are merged so that ellipses do not introduce
+duplicate legend keys. Sample labels are kept separate from group labels.
 }

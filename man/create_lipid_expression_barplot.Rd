@@ -2,7 +2,7 @@
 % Please edit documentation in R/visualization.R
 \name{create_lipid_expression_barplot}
 \alias{create_lipid_expression_barplot}
-\title{Create Lipid Expression Barplot (FIXED VERSION)}
+\title{Create a Lipid Expression Barplot Ordered by Group}
 \usage{
 create_lipid_expression_barplot(
   data_matrix,
@@ -15,23 +15,26 @@ create_lipid_expression_barplot(
 )
 }
 \arguments{
-\item{data_matrix}{Data matrix (samples as rows, lipids as columns)}
+\item{data_matrix}{Numeric matrix (samples as rows, lipids as columns).}
 
-\item{metadata}{Metadata data frame}
+\item{metadata}{Metadata data frame.}
 
-\item{selected_lipids}{Vector of lipid names to plot}
+\item{selected_lipids}{Character vector of lipid names to plot.}
 
-\item{selected_samples}{Vector of sample names to include (optional)}
+\item{selected_samples}{Optional character vector of sample names to retain.}
 
-\item{selected_groups}{Vector of group names to include (optional)}
+\item{selected_groups}{Optional character vector of group names to retain.}
 
-\item{group_column}{Name of the group column in metadata}
+\item{group_column}{Name of the group column in \code{metadata}.}
 
-\item{data_type}{Label for data type ("raw" or "normalized")}
+\item{data_type}{Label for the y-axis subtitle ("raw" or "normalized").}
 }
 \value{
-ggplot object or list of ggplot objects
+A single \code{ggplot2} object (one lipid) or a named list of
+  \code{ggplot2} objects (multiple lipids).
 }
 \description{
-Create Lipid Expression Barplot (FIXED VERSION)
+Produces per-lipid barplots coloured by sample group. Samples are
+automatically sorted by group (then alphabetically within group) for a
+cleaner visual.
 }

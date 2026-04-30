@@ -2,7 +2,7 @@
 % Please edit documentation in R/visualization.R
 \name{create_heatmap_robust}
 \alias{create_heatmap_robust}
-\title{Create Heatmap with Sample Matching}
+\title{Create a Robust Heatmap of Top Variable Features}
 \usage{
 create_heatmap_robust(
   data_matrix,
@@ -14,21 +14,22 @@ create_heatmap_robust(
 )
 }
 \arguments{
-\item{data_matrix}{Data matrix for heatmap (features as rows, samples as columns)}
+\item{data_matrix}{Numeric matrix (features as rows, samples as columns).}
 
-\item{metadata}{Metadata data frame (samples as rows)}
+\item{metadata}{Metadata data frame (samples as rows).}
 
-\item{group_column}{Group column name}
+\item{group_column}{Name of the group column in \code{metadata}.}
 
-\item{top_n}{Number of top features to include}
+\item{top_n}{Maximum number of features to display.}
 
-\item{classification_data}{Optional classification data for row annotation}
+\item{classification_data}{Optional classification data frame for row
+annotation (must have a \code{Lipid} column).}
 
-\item{title}{Plot title}
+\item{title}{Heatmap title.}
 }
 \value{
-pheatmap object or ggplot object as fallback
+A \code{pheatmap} object, or a \code{ggplot2} error plot.
 }
 \description{
-Create Heatmap with Sample Matching
+Create a Robust Heatmap of Top Variable Features
 }

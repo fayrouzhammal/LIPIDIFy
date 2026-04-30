@@ -13,7 +13,9 @@ create_default_contrasts(group_levels)
 Character vector of limma-style contrast strings (e.g., "Treatment - Control")
 }
 \description{
-Create Default Contrasts
+Creates default pairwise contrasts from group levels. If the levels contain
+special characters that are invalid for limma/edgeR, they should already
+be sanitized before calling this function.
 }
 \examples{
 create_default_contrasts(c("A","B","C"))

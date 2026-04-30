@@ -7,11 +7,13 @@
 normalize_quantile(data)
 }
 \arguments{
-\item{data}{Numeric data matrix}
+\item{data}{Numeric matrix (samples as rows, lipids as columns).}
 }
 \value{
-Quantile normalized data
+Quantile-normalized matrix of the same dimensions.
 }
 \description{
-Quantile Normalization
+Forces all samples to share an identical intensity distribution.
+After this step per-sample boxplots will look nearly identical --
+that is the intended and correct behaviour of quantile normalization.
 }

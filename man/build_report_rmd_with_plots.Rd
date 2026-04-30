@@ -2,7 +2,7 @@
 % Please edit documentation in R/shiny_app.R
 \name{build_report_rmd_with_plots}
 \alias{build_report_rmd_with_plots}
-\title{Build Report Rmd Content with Plots}
+\title{Build the Rmd Content for the Analysis Report}
 \usage{
 build_report_rmd_with_plots(
   title,
@@ -13,31 +13,41 @@ build_report_rmd_with_plots(
   diff_results,
   enrichment_results,
   output_format = "html",
-  plot_files = list()
+  plot_files = list(),
+  extra_plots = list()
 )
 }
 \arguments{
-\item{title}{Report title}
+\item{title}{Report title.}
 
-\item{author}{Report author}
+\item{author}{Author name.}
 
-\item{sections}{Sections to include}
+\item{sections}{Character vector of section keys to include.}
 
-\item{raw_data}{Raw data object}
+\item{raw_data}{Raw data list.}
 
-\item{normalized_data}{Normalized data object}
+\item{normalized_data}{Normalized data list.}
 
-\item{diff_results}{Differential analysis results}
+\item{diff_results}{Differential analysis results list.}
 
-\item{enrichment_results}{Enrichment analysis results}
+\item{enrichment_results}{Enrichment analysis results list.}
 
-\item{output_format}{Output format (html or pdf)}
+\item{output_format}{Either \code{"html"} or \code{"pdf"}.}
 
-\item{plot_files}{Named list of plot file paths}
+\item{plot_files}{Named list of plot PNG paths
+(raw_plot, norm_plot, pipeline_plot, results_plot, enrichment_plot).}
+
+\item{extra_plots}{Optional list of additional plot entries from
+session history; each entry has \code{$file}, \code{$section},
+\code{$label}.}
 }
 \value{
-Character string with Rmd content
+A single character string containing the complete Rmd document.
 }
 \description{
-Build Report Rmd Content with Plots
+Generates a complete R Markdown document as a character string.
+\code{plot_files} is a simple named list of PNG file paths
+(raw_plot, norm_plot, pipeline_plot, results_plot, enrichment_plot).
+\code{extra_plots} is an optional list of additional plot entries
+from the session history.
 }

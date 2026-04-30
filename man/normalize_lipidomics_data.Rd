@@ -7,13 +7,17 @@
 normalize_lipidomics_data(data, methods = c("TIC", "Log2"))
 }
 \arguments{
-\item{data}{Numeric data matrix}
+\item{data}{Numeric matrix (samples as rows, lipids as columns).}
 
-\item{methods}{Vector of normalization methods}
+\item{methods}{Character vector of normalization method names.}
 }
 \value{
-Normalized data matrix
+Normalized numeric matrix.
 }
 \description{
-Normalize Lipidomics Data
+Convenience wrapper around \code{apply_normalizations}.
+}
+\examples{
+m <- matrix(rlnorm(60, 8, 1), nrow = 6, ncol = 10)
+normalize_lipidomics_data(m, c("TIC", "Log2"))
 }

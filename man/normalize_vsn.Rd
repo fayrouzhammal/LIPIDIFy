@@ -2,16 +2,17 @@
 % Please edit documentation in R/utils.R
 \name{normalize_vsn}
 \alias{normalize_vsn}
-\title{VSN Normalization (simplified)}
+\title{VSN Normalization (Simplified)}
 \usage{
 normalize_vsn(data)
 }
 \arguments{
-\item{data}{Numeric data matrix}
+\item{data}{Numeric matrix (samples as rows, lipids as columns).}
 }
 \value{
-VSN normalized data
+VSN-normalized matrix.
 }
 \description{
-VSN Normalization (simplified)
+Log2-transforms the data, then median-centres each sample relative to the
+global median. This is a simplified approximation of full VSN.
 }

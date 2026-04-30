@@ -1,0 +1,216 @@
+---
+title: "LIPIDIFy: A Complete Lipidomics Analysis Workflow"
+author:
+  - name: "Package Authors"
+package: LIPIDIFy
+output:
+  BiocStyle::html_document:
+    toc: true
+    toc_float: true
+vignette: >
+  %\VignetteIndexEntry{LIPIDIFy: A Complete Lipidomics Analysis Workflow}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse  = TRUE,
+  comment   = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+# Introduction
+
+**LIPIDIFy** is an R package providing a complete, interactive analysis
+pipeline for lipidomics mass-spectrometry data. It includes:
+
+- Automatic lipid classification by class, type, and fatty-acid saturation
+- Multiple normalization strategies with visual comparison
+- Differential abundance analysis (limma / EdgeR)
+- Lipid-class enrichment analysis (fgsea)
+- An interactive Shiny dashboard for point-and-click analysis
+- Automated HTML/PDF report generation
+
+This vignette demonstrates the full command-line workflow using a built-in
+example dataset.
+
+# Installation
+
+```{r install, eval=FALSE}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("LIPIDIFy")
+```
+
+# Quick Start — Interactive App
+
+The fastest way to explore LIPIDIFy is via the Shiny dashboard:
+
+```{r launch-app, eval=FALSE}
+library(LIPIDIFy)
+launch_lipidomics_app()
+```
+
+The rest of this vignette demonstrates the same analysis programmatically.
+
+# Load the Example Dataset
+
+```{r load-data}
+library(LIPIDIFy)
+
+raw_df   <- generate_example_data()
+data_obj <- load_lipidomics_data_from_df(raw_df)
+
+cat("Samples :", nrow(data_obj$numeric_data), "\n")
+cat("Lipids  :", ncol(data_obj$numeric_data), "\n")
+cat("Groups  :", paste(unique(data_obj$metadata$`Sample Group`),
+                       collapse = ", "), "\n")
+```
+
+# Lipid Classification
+
+```{r classify}
+lipid_names    <- colnames(data_obj$numeric_data)
+classification <- classify_lipids(lipid_names)
+
+head(classification)
+table(classification$LipidGroup)
+table(classification$Saturation)
+```
+
+# Normalization
+
+## Available methods
+
+```{r norm-methods}
+get_normalization_methods()
+```
+
+Descriptions of each method are available via `get_normalization_descriptions()`.
+
+> **Note on Quantile Normalization:** after quantile normalization all
+> per-sample boxplots look nearly identical. This is the *expected, correct*
+> behaviour — the method forces every sample to share the same intensity
+> distribution.
+
+> **Note on Median vs Mean:** on symmetric (log-normal) lipidomics data the
+> two methods produce visually similar results. On skewed data they differ.
+> This is expected and is not a bug.
+
+## Apply a normalization pipeline
+
+```{r normalize}
+norm_data <- apply_normalizations(
+  data_obj$numeric_data,
+  methods = c("TIC", "Log2")
+)
+
+# Quick sanity check: row sums after TIC should be equal
+tic_only <- normalize_tic(data_obj$numeric_data)
+round(rowSums(tic_only), 2)  # all values should be identical
+```
+
+## Visualize raw vs normalized
+
+```{r viz-raw, fig.cap="Raw data distribution by sample"}
+raw_list  <- list(numeric_data = data_obj$numeric_data)
+norm_list <- list(numeric_data = norm_data,
+                  metadata     = data_obj$metadata)
+
+p_raw  <- visualize_raw_data_improved(raw_list,  "boxplot", "sample")
+p_norm <- visualize_raw_data_improved(norm_list, "boxplot", "sample",
+                                      metadata     = data_obj$metadata,
+                                      group_column = "Sample Group")
+print(p_raw)
+print(p_norm)
+```
+
+# PCA
+
+```{r pca, fig.cap="PCA coloured by sample group with 95% confidence ellipses"}
+pca_res <- perform_pca(norm_data, data_obj$metadata, "Sample Group")
+
+create_pca_plot_with_ellipses(
+  pca_data           = pca_res$pca_data,
+  variance_explained = pca_res$variance_explained,
+  ellipse_type       = "confidence",
+  show_sample_labels = TRUE
+)
+```
+
+# Differential Analysis
+
+```{r diff-analysis}
+diff_res <- perform_differential_analysis(
+  data_matrix    = norm_data,
+  metadata       = data_obj$metadata,
+  group_column   = "Sample Group",
+  contrasts_list = c("GroupB - GroupA", "GroupC - GroupA"),
+  method         = "limma"
+)
+
+# Summary
+for (nm in names(diff_res$results)) {
+  res   <- diff_res$results[[nm]]
+  n_sig <- sum(res$adj.P.Val < 0.05, na.rm = TRUE)
+  message(nm, ": ", n_sig, " significant lipids")
+}
+```
+
+## Volcano plot
+
+```{r volcano, fig.cap="Volcano plot for GroupB vs GroupA"}
+create_volcano_plot_labeled(
+  results         = diff_res$results[["GroupB - GroupA"]],
+  title           = "Volcano: GroupB vs GroupA",
+  logfc_threshold = 1,
+  pval_threshold  = 0.05,
+  top_labels      = 10,
+  classification_data = classification,
+  color_by        = "LipidGroup"
+)
+```
+
+# Lipid Expression
+
+```{r expression, fig.cap="Per-sample abundance of selected lipids, sorted by group"}
+# Select the top 3 most significantly changed lipids
+top_lipids <- utils::head(
+  rownames(diff_res$results[["GroupB - GroupA"]])[
+    order(diff_res$results[["GroupB - GroupA"]]$adj.P.Val)
+  ], 3
+)
+
+plots <- create_lipid_expression_barplot(
+  data_matrix    = norm_data,
+  metadata       = data_obj$metadata,
+  selected_lipids = top_lipids,
+  group_column   = "Sample Group"
+)
+
+# Print first plot (samples sorted by group automatically)
+print(plots[[1]])
+```
+
+# Enrichment Analysis
+
+```{r enrichment}
+enrich_res <- perform_enrichment_analysis(
+  results_list      = diff_res$results,
+  classification_data = classification,
+  min_set_size      = 3,
+  max_set_size      = 500
+)
+
+# Show available results
+str(enrich_res, max.level = 2)
+```
+
+# Session Information
+
+```{r session-info}
+sessionInfo()
+```

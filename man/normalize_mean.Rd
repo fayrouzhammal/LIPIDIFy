@@ -7,11 +7,11 @@
 normalize_mean(data)
 }
 \arguments{
-\item{data}{Numeric data matrix (samples as rows)}
+\item{data}{Numeric matrix (samples as rows, lipids as columns).}
 }
 \value{
-Mean normalized data
+Mean-normalized matrix.
 }
 \description{
-Mean Normalization
+Scales each sample so its mean equals the global mean across all samples.
 }

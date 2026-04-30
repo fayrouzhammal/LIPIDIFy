@@ -2,18 +2,18 @@
 % Please edit documentation in R/visualization.R
 \name{fix_sample_alignment}
 \alias{fix_sample_alignment}
-\title{Fix Sample Alignment between data and metadata}
+\title{Align Samples Between Data Matrix and Metadata}
 \usage{
 fix_sample_alignment(data_matrix, metadata)
 }
 \arguments{
-\item{data_matrix}{Data matrix (features as rows, samples as columns)}
+\item{data_matrix}{Numeric matrix (features as rows, samples as columns).}
 
-\item{metadata}{Metadata data frame}
+\item{metadata}{Metadata data frame.}
 }
 \value{
-List with aligned data_matrix and metadata
+Named list with aligned \code{data_matrix} and \code{metadata}.
 }
 \description{
-Fix Sample Alignment between data and metadata
+Align Samples Between Data Matrix and Metadata
 }
