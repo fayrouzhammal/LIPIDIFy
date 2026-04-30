@@ -19,3 +19,9 @@ List containing PCA results and plot
 \description{
 Perform PCA Analysis
 }
+\examples{
+d <- load_lipidomics_data_from_df(generate_example_data())
+norm <- apply_normalizations(d$numeric_data, c("TIC", "Log2"))
+pca_res <- perform_pca(norm, d$metadata, "Sample Group")
+names(pca_res)
+}

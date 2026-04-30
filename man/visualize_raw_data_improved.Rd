@@ -39,8 +39,7 @@ Extended visualization that can show data from the sample perspective
 variable lipids).
 }
 \examples{
-\dontrun{
 dl <- load_lipidomics_data_from_df(generate_example_data())
-visualize_raw_data_improved(dl, "boxplot", "sample")
-}
+p <- visualize_raw_data_improved(dl, "boxplot", "sample")
+print(p)
 }

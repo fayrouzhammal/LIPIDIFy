@@ -18,3 +18,8 @@ Starts an interactive Shiny dashboard for end-to-end lipidomics analysis,
 including data upload, lipid classification, normalization, differential
 analysis, enrichment analysis, and report generation.
 }
+\examples{
+if (interactive()) {
+  launch_lipidomics_app()
+}
+}

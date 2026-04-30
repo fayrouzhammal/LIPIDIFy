@@ -21,8 +21,7 @@ Produces a simple per-sample boxplot, density, or histogram of raw
 lipidomics intensities.
 }
 \examples{
-\dontrun{
 dl <- load_lipidomics_data_from_df(generate_example_data())
-visualize_raw_data(dl, "boxplot")
-}
+p <- visualize_raw_data(dl, "boxplot")
+print(p)
 }

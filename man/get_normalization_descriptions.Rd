@@ -12,3 +12,7 @@ Named character vector (name = method key, value = description).
 \description{
 Used by the Shiny app to populate help text.
 }
+\examples{
+descs <- get_normalization_descriptions()
+cat(descs["TIC"])
+}

@@ -33,3 +33,8 @@ A \code{pheatmap} object, or a \code{ggplot2} error plot.
 \description{
 Create a Robust Heatmap of Top Variable Features
 }
+\examples{
+d <- load_lipidomics_data_from_df(generate_example_data())
+norm <- apply_normalizations(d$numeric_data, c("TIC", "Log2"))
+create_heatmap_robust(t(norm), d$metadata, "Sample Group", top_n = 10)
+}

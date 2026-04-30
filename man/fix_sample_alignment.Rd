@@ -17,3 +17,8 @@ Named list with aligned \code{data_matrix} and \code{metadata}.
 \description{
 Align Samples Between Data Matrix and Metadata
 }
+\examples{
+d <- load_lipidomics_data_from_df(generate_example_data())
+aligned <- fix_sample_alignment(t(d$numeric_data), d$metadata)
+names(aligned)
+}

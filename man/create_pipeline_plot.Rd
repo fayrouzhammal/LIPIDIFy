@@ -32,3 +32,8 @@ A \code{ggplot2} object.
 \description{
 Quick QC Plot for a Normalized Data Matrix
 }
+\examples{
+m <- matrix(rlnorm(60, 8, 1), nrow = 6, ncol = 10)
+p <- create_pipeline_plot(m, title = "Test Pipeline")
+print(p)
+}

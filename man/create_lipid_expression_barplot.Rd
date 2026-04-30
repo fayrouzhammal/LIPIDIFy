@@ -38,3 +38,11 @@ Produces per-lipid barplots coloured by sample group. Samples are
 automatically sorted by group (then alphabetically within group) for a
 cleaner visual.
 }
+\examples{
+d <- load_lipidomics_data_from_df(generate_example_data())
+p <- create_lipid_expression_barplot(
+  d$numeric_data, d$metadata,
+  selected_lipids = colnames(d$numeric_data)[1],
+  group_column = "Sample Group")
+print(p)
+}

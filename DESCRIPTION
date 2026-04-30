@@ -17,7 +17,7 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: false
 Depends:
-    R (>= 4.4.0)
+    R (>= 4.5.0)
 Imports:
     shiny (>= 1.8.0),
     shinydashboard,
@@ -48,7 +48,7 @@ Suggests:
     testthat (>= 3.0.0),
     devtools
 VignetteBuilder: knitr
-biocViews: Lipidomics, MassSpectrometry, Normalization,
+biocViews: Lipidomics, MassSpectrometry, Normalization, Preprocessing,
     DifferentialExpression, GeneSetEnrichment, Visualization,
     ShinyApps, MultipleComparison
 RoxygenNote: 7.3.3

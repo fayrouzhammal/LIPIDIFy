@@ -16,3 +16,7 @@ TIC-normalized matrix of the same dimensions.
 Divides each sample by its total ion current (row sum) and rescales to the
 global mean TIC.
 }
+\examples{
+m <- matrix(c(1000,2000,3000,4000,500,1500), nrow = 2)
+normalize_tic(m)
+}

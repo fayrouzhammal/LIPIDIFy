@@ -38,3 +38,10 @@ A \code{ggplot2} object.
 The colour/fill legends are merged so that ellipses do not introduce
 duplicate legend keys. Sample labels are kept separate from group labels.
 }
+\examples{
+d <- load_lipidomics_data_from_df(generate_example_data())
+norm <- apply_normalizations(d$numeric_data, c("TIC", "Log2"))
+pca_res <- perform_pca(norm, d$metadata, "Sample Group")
+p <- create_pca_plot_with_ellipses(pca_res$pca_data, pca_res$variance_explained)
+print(p)
+}

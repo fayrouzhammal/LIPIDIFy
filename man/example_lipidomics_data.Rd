@@ -13,3 +13,7 @@ A data.frame as returned by \code{generate_example_data()}.
 Convenience helper that generates a small synthetic lipidomics dataset
 for examples and vignettes.
 }
+\examples{
+df <- example_lipidomics_data()
+nrow(df)
+}

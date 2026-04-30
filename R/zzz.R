@@ -10,10 +10,10 @@ utils::globalVariables(c(
 # ---------------------------------------------------------------------------
 # Package-level imports
 # These directives are picked up by roxygen2 (devtools::document()) and
-# written to NAMESPACE as importFrom() entries, eliminating the R CMD check
+# written to NAMESPACE as importFrom() entries, eliminating R CMD check
 # NOTEs about undefined global functions.
 # ---------------------------------------------------------------------------
 
-#' @importFrom utils head
-#' @importFrom stats model.matrix
+#' @importFrom utils head write.csv capture.output
+#' @importFrom stats model.matrix median setNames
 NULL

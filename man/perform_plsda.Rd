@@ -21,3 +21,9 @@ List containing PLS-DA results and plot
 \description{
 Perform PLS-DA Analysis (FIXED VERSION)
 }
+\examples{
+d <- load_lipidomics_data_from_df(generate_example_data())
+norm <- apply_normalizations(d$numeric_data, c("TIC", "Log2"))
+res <- perform_plsda(norm, d$metadata, "Sample Group")
+names(res)
+}

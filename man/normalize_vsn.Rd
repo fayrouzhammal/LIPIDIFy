@@ -16,3 +16,7 @@ VSN-normalized matrix.
 Log2-transforms the data, then median-centres each sample relative to the
 global median. This is a simplified approximation of full VSN.
 }
+\examples{
+m <- matrix(c(1000,2000,3000,4000,500,1500), nrow = 2)
+normalize_vsn(m)
+}

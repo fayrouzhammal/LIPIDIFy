@@ -31,3 +31,10 @@ A \code{ggplot2} object.
 \description{
 Create a PLS-DA Plot with Optional Ellipses
 }
+\examples{
+d <- load_lipidomics_data_from_df(generate_example_data())
+norm <- apply_normalizations(d$numeric_data, c("TIC", "Log2"))
+res <- perform_plsda(norm, d$metadata, "Sample Group")
+p <- create_plsda_plot_with_ellipses(res$scores_data)
+print(p)
+}

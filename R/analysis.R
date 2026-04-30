@@ -7,9 +7,15 @@
 #' @param method Method to use: "limma" or "edger"
 #' @return List containing results for each contrast
 #' @export
-perform_differential_analysis <- function(data_matrix, metadata, group_column = "Sample Group", 
+#' @examples
+#' d <- load_lipidomics_data_from_df(generate_example_data())
+#' norm <- apply_normalizations(d$numeric_data, c("TIC", "Log2"))
+#' res <- perform_differential_analysis(norm, d$metadata, "Sample Group",
+#'   contrasts_list = NULL, method = "limma"
+#' )
+#' names(res)
+perform_differential_analysis <- function(data_matrix, metadata, group_column = "Sample Group",
                                           contrasts_list = NULL, method = "limma") {
-  
   if (method == "limma") {
     return(perform_differential_analysis_limma(data_matrix, metadata, group_column, contrasts_list))
   } else if (method == "edger") {
@@ -27,67 +33,68 @@ perform_differential_analysis <- function(data_matrix, metadata, group_column = 
 #' @param contrasts_list List of contrasts to perform
 #' @return List containing LIMMA results for each contrast
 perform_differential_analysis_limma <- function(data_matrix, metadata, group_column = "Sample Group", contrasts_list = NULL) {
-  
   # Convert to matrix if needed
   if (!is.matrix(data_matrix)) {
     data_matrix <- as.matrix(data_matrix)
   }
-  
+
   # Ensure data matrix is transposed correctly (features as rows)
   if (nrow(data_matrix) < ncol(data_matrix)) {
     data_matrix <- t(data_matrix)
   }
-  
+
   # --- FIX: Store original group labels for UI/display ---
   original_groups <- as.character(metadata[[group_column]])
   original_levels <- unique(original_groups)
-  
+
   # --- FIX: Create sanitized group factor using make.names() ---
   sanitized_groups <- make.names(original_groups)
   sanitized_levels <- make.names(original_levels)
-  
+
   # Create mapping from original to sanitized
   level_mapping <- sanitized_levels
   names(level_mapping) <- original_levels
   reverse_mapping <- original_levels
   names(reverse_mapping) <- sanitized_levels
-  
+
   # Create design matrix using sanitized levels
   groups <- factor(sanitized_groups, levels = sanitized_levels)
   design <- stats::model.matrix(~ 0 + groups)
   colnames(design) <- sanitized_levels
-  
+
   # Fit linear model
   fit <- limma::lmFit(data_matrix, design)
-  
+
   # If no contrasts specified, create default contrasts (using sanitized names)
   if (is.null(contrasts_list)) {
     contrasts_list <- create_default_contrasts(sanitized_levels)
   } else {
     # --- FIX: Convert user-provided contrasts to sanitized names ---
-    contrasts_list <- sapply(contrasts_list, function(contrast) {
+    contrasts_list <- vapply(contrasts_list, function(contrast) {
       for (orig in original_levels) {
         sanitized <- level_mapping[[orig]]
         # Replace whole word matches only
-        contrast <- gsub(paste0("\\b", gsub("([.|()\\^{}+$*?]|\\[|\\])", "\\\\\\1", orig), "\\b"), 
-                         sanitized, contrast)
+        contrast <- gsub(
+          paste0("\\b", gsub("([.|()\\^{}+$*?]|\\[|\\])", "\\\\\\1", orig), "\\b"),
+          sanitized, contrast
+        )
       }
       return(contrast)
-    }, USE.NAMES = FALSE)
+    }, character(1), USE.NAMES = FALSE)
   }
-  
+
   # Create contrast matrix
   contrast_matrix <- limma::makeContrasts(contrasts = contrasts_list, levels = design)
-  
+
   # Fit contrasts and apply empirical Bayes
   fit2 <- limma::contrasts.fit(fit, contrast_matrix)
   fit2 <- limma::eBayes(fit2)
-  
+
   # Extract results for each contrast
   results <- list()
   original_contrast_names <- colnames(contrast_matrix)
-  
-  for (i in 1:ncol(contrast_matrix)) {
+
+  for (i in seq_len(ncol(contrast_matrix))) {
     # --- FIX: Convert contrast names back to original labels for display ---
     contrast_name <- original_contrast_names[i]
     display_name <- contrast_name
@@ -95,10 +102,10 @@ perform_differential_analysis_limma <- function(data_matrix, metadata, group_col
       orig <- reverse_mapping[[sanitized]]
       display_name <- gsub(paste0("\\b", sanitized, "\\b"), orig, display_name)
     }
-    
+
     results[[display_name]] <- limma::topTable(fit2, coef = i, number = Inf, adjust.method = "fdr")
   }
-  
+
   return(list(
     fit = fit2,
     results = results,
@@ -118,76 +125,77 @@ perform_differential_analysis_limma <- function(data_matrix, metadata, group_col
 #' @param contrasts_list List of contrasts to perform
 #' @return List containing EdgeR results for each contrast
 perform_differential_analysis_edger <- function(data_matrix, metadata, group_column = "Sample Group", contrasts_list = NULL) {
-  
   # Convert to matrix if needed
   if (!is.matrix(data_matrix)) {
     data_matrix <- as.matrix(data_matrix)
   }
-  
+
   # Ensure data matrix is transposed correctly (features as rows)
   if (nrow(data_matrix) < ncol(data_matrix)) {
     data_matrix <- t(data_matrix)
   }
-  
+
   # Convert to counts-like data (EdgeR expects integer counts, but can work with continuous data)
   # For lipidomics, we'll round the normalized data
   data_matrix <- round(data_matrix)
-  data_matrix[data_matrix < 0] <- 0  # Ensure no negative values
-  
+  data_matrix[data_matrix < 0] <- 0 # Ensure no negative values
+
   # --- FIX: Store original group labels for UI/display ---
   original_groups <- as.character(metadata[[group_column]])
   original_levels <- unique(original_groups)
-  
+
   # --- FIX: Create sanitized group factor using make.names() ---
   sanitized_groups <- make.names(original_groups)
   sanitized_levels <- make.names(original_levels)
-  
+
   # Create mapping from original to sanitized
   level_mapping <- sanitized_levels
   names(level_mapping) <- original_levels
   reverse_mapping <- original_levels
   names(reverse_mapping) <- sanitized_levels
-  
+
   # Create groups factor using sanitized levels
   groups <- factor(sanitized_groups, levels = sanitized_levels)
-  
+
   # Create DGEList object
   dge <- edgeR::DGEList(counts = data_matrix, group = groups)
-  
+
   # Estimate dispersion
   dge <- edgeR::estimateDisp(dge)
-  
+
   # Create design matrix using sanitized levels
   design <- stats::model.matrix(~ 0 + groups)
   colnames(design) <- sanitized_levels
-  
+
   # If no contrasts specified, create default contrasts (using sanitized names)
   if (is.null(contrasts_list)) {
     contrasts_list <- create_default_contrasts(sanitized_levels)
   } else {
     # --- FIX: Convert user-provided contrasts to sanitized names ---
-    contrasts_list <- sapply(contrasts_list, function(contrast) {
+    contrasts_list <- vapply(contrasts_list, function(contrast) {
       for (orig in original_levels) {
         sanitized <- level_mapping[[orig]]
         # Replace whole word matches only
-        contrast <- gsub(paste0("\\b", gsub("([.|()\\^{}+$*?]|\\[|\\])", "\\\\\\1", orig), "\\b"), 
-                         sanitized, contrast)
+        contrast <- gsub(
+          paste0("\\b", gsub("([.|()\\^{}+$*?]|\\[|\\])", "\\\\\\1", orig), "\\b"),
+          sanitized, contrast
+        )
       }
       return(contrast)
-    }, USE.NAMES = FALSE)
+    }, character(1), USE.NAMES = FALSE)
   }
-  
+
   # Create contrast matrix
   contrast_matrix <- limma::makeContrasts(contrasts = contrasts_list, levels = design)
-  
+
   # Fit GLM
   fit <- edgeR::glmQLFit(dge, design)
-  
+
   # Extract results for each contrast
   results <- list()
   original_contrast_names <- colnames(contrast_matrix)
-  
-  for (i in 1:ncol(contrast_matrix)) {
+
+  for (i in seq_len(ncol(contrast_matrix))) {
     # --- FIX: Convert contrast names back to original labels for display ---
     contrast_name <- original_contrast_names[i]
     display_name <- contrast_name
@@ -195,20 +203,20 @@ perform_differential_analysis_edger <- function(data_matrix, metadata, group_col
       orig <- reverse_mapping[[sanitized]]
       display_name <- gsub(paste0("\\b", sanitized, "\\b"), orig, display_name)
     }
-    
+
     qlf <- edgeR::glmQLFTest(fit, contrast = contrast_matrix[, i])
-    
+
     # Extract results in similar format to limma
     res <- edgeR::topTags(qlf, n = Inf)$table
-    
+
     # Rename columns to match limma output
     colnames(res)[colnames(res) == "logCPM"] <- "AveExpr"
     colnames(res)[colnames(res) == "PValue"] <- "P.Value"
     colnames(res)[colnames(res) == "FDR"] <- "adj.P.Val"
-    
+
     results[[display_name]] <- res
   }
-  
+
   return(list(
     fit = fit,
     results = results,
@@ -229,21 +237,23 @@ perform_differential_analysis_edger <- function(data_matrix, metadata, group_col
 #' @param group_levels Character vector of group level names (e.g., c("Control","Treatment","Resistant"))
 #' @return Character vector of limma-style contrast strings (e.g., "Treatment - Control")
 #' @examples
-#' create_default_contrasts(c("A","B","C"))
+#' create_default_contrasts(c("A", "B", "C"))
 #' @export
 create_default_contrasts <- function(group_levels) {
   group_levels <- as.character(group_levels)
   group_levels <- unique(group_levels[!is.na(group_levels)])
-  if (length(group_levels) < 2) return(character(0))
-  
+  if (length(group_levels) < 2) {
+    return(character(0))
+  }
+
   # --- FIX: Ensure levels are valid R names for makeContrasts ---
   # Note: This function now expects already-sanitized levels from the caller,
-  
+
   # but we add a safeguard here for direct usage
   safe_levels <- make.names(group_levels)
-  
+
   contrasts <- c()
-  for (i in 1:(length(safe_levels) - 1)) {
+  for (i in seq_len(length(safe_levels) - 1)) {
     for (j in (i + 1):length(safe_levels)) {
       contrasts <- c(contrasts, paste0(safe_levels[j], " - ", safe_levels[i]))
     }
@@ -261,22 +271,30 @@ create_default_contrasts <- function(group_levels) {
 #' @param custom_sets Optional named list of custom lipid sets
 #' @return List containing GSEA results
 #' @export
-perform_enrichment_analysis <- function(results_list, classification_data, 
+#' @examples
+#' d <- load_lipidomics_data_from_df(generate_example_data())
+#' norm <- apply_normalizations(d$numeric_data, c("TIC", "Log2"))
+#' cls <- classify_lipids(colnames(norm))
+#' res <- perform_differential_analysis(norm, d$metadata, "Sample Group",
+#'   contrasts_list = NULL, method = "limma"
+#' )
+#' enrich <- perform_enrichment_analysis(res$results, cls, min_set_size = 3)
+#' names(enrich)
+perform_enrichment_analysis <- function(results_list, classification_data,
                                         min_set_size = 5, max_set_size = 500,
                                         custom_sets = NULL) {
-  
   enrichment_results <- list()
-  
+
   for (contrast_name in names(results_list)) {
     message("Processing enrichment for: ", contrast_name)
-    
+
     results <- results_list[[contrast_name]]
-    
+
     # Create ranked list
     ranked_vector <- results$logFC
     names(ranked_vector) <- rownames(results)
     ranked_vector <- sort(ranked_vector, decreasing = TRUE)
-    
+
     # Merge with classification
     merged_data <- merge(
       data.frame(Lipid = names(ranked_vector), logFC = ranked_vector, stringsAsFactors = FALSE),
@@ -284,13 +302,13 @@ perform_enrichment_analysis <- function(results_list, classification_data,
       by = "Lipid",
       all.x = TRUE
     )
-    
+
     # Create pathway sets from classification columns
     pathway_sets_list <- list()
-    
+
     # Get all classification columns (excluding Lipid and logFC)
     class_columns <- setdiff(colnames(classification_data), "Lipid")
-    
+
     for (class_col in class_columns) {
       if (class_col %in% colnames(merged_data)) {
         sets <- create_pathway_sets(merged_data, class_col)
@@ -299,12 +317,12 @@ perform_enrichment_analysis <- function(results_list, classification_data,
         }
       }
     }
-    
+
     # Add custom sets if provided
     if (!is.null(custom_sets)) {
       pathway_sets_list[["custom"]] <- custom_sets
     }
-    
+
     # Run GSEA for each set of pathways
     gsea_results <- list()
     for (set_name in names(pathway_sets_list)) {
@@ -313,10 +331,10 @@ perform_enrichment_analysis <- function(results_list, classification_data,
         gsea_results[[set_name]] <- gsea_res
       }
     }
-    
+
     enrichment_results[[contrast_name]] <- gsea_results
   }
-  
+
   return(enrichment_results)
 }
 
@@ -329,21 +347,21 @@ perform_enrichment_analysis <- function(results_list, classification_data,
 #' @return Named list of lipid sets
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' custom_sets <- load_custom_enrichment_sets("my_sets.csv")
 #' }
 load_custom_enrichment_sets <- function(file_path) {
   # Read the file
   sets_df <- utils::read.csv(file_path, check.names = FALSE, stringsAsFactors = FALSE)
-  
+
   # Validate columns
   if (!all(c("Lipid", "Set_Name") %in% colnames(sets_df))) {
     stop("Custom sets file must contain 'Lipid' and 'Set_Name' columns")
   }
-  
+
   # Create named list of sets
   sets_list <- split(sets_df$Lipid, sets_df$Set_Name)
-  
+
   return(sets_list)
 }
 
@@ -355,10 +373,10 @@ load_custom_enrichment_sets <- function(file_path) {
 create_pathway_sets <- function(merged_data, classification_column) {
   # Use base R instead of dplyr pipeline
   grouped_data <- split(merged_data$Lipid, merged_data[[classification_column]])
-  
+
   # Remove any NULL or empty groups
-  pathway_sets <- grouped_data[sapply(grouped_data, length) > 0]
-  
+  pathway_sets <- grouped_data[vapply(grouped_data, length, integer(1)) > 0L]
+
   return(pathway_sets)
 }
 
@@ -373,31 +391,36 @@ run_fgsea_safe <- function(pathway_sets, ranked_vector, min_size, max_size) {
   if (length(pathway_sets) == 0) {
     return(data.frame())
   }
-  
-  tryCatch({
-    # Add small random noise to avoid ties
-    ranked_vector <- ranked_vector + stats::rnorm(length(ranked_vector), sd = 1e-6)
-    
-    gsea_results <- fgsea::fgseaMultilevel(
-      pathways = pathway_sets,
-      stats = ranked_vector,
-      minSize = min_size,
-      maxSize = max_size
-    )
-    
-    # Convert list columns to strings
-    gsea_results <- convert_list_columns_to_strings(gsea_results)
-    
-    return(gsea_results)
-    
-  }, error = function(e) {
-    # Check if it's the corrupt database error
-    if (grepl("corrupt", e$message, ignore.case = TRUE)) {
-      warning("fgsea database appears corrupt. Try reinstalling: install.packages('fgsea')")
+
+  tryCatch(
+    {
+      # Add small random noise to avoid ties
+      ranked_vector <- ranked_vector + stats::rnorm(length(ranked_vector), sd = 1e-6)
+
+      gsea_results <- fgsea::fgseaMultilevel(
+        pathways = pathway_sets,
+        stats = ranked_vector,
+        minSize = min_size,
+        maxSize = max_size
+      )
+
+      # Convert list columns to strings
+      gsea_results <- convert_list_columns_to_strings(gsea_results)
+
+      return(gsea_results)
+    },
+    error = function(e) {
+      # Emit a single, specific warning (avoid stacking redundant warnings)
+      if (grepl("corrupt", e$message, ignore.case = TRUE)) {
+        warning("fgsea database appears corrupt. Try reinstalling fgsea.",
+          call. = FALSE
+        )
+      } else {
+        warning("FGSEA error: ", conditionMessage(e), call. = FALSE)
+      }
+      return(NULL)
     }
-    warning(paste("FGSEA error:", e$message))
-    return(NULL)
-  })
+  )
 }
 
 #' Run FGSEA (original function kept for compatibility)
@@ -418,13 +441,9 @@ run_fgsea <- function(pathway_sets, ranked_vector, min_size, max_size) {
 convert_list_columns_to_strings <- function(df) {
   for (col in names(df)) {
     if (is.list(df[[col]])) {
-      df[[col]] <- sapply(df[[col]], function(x) {
-        if (is.null(x)) {
-          return(NA)
-        } else {
-          paste(x, collapse = ",")
-        }
-      })
+      df[[col]] <- vapply(df[[col]], function(x) {
+        if (is.null(x)) NA_character_ else paste(x, collapse = ",")
+      }, character(1))
     }
   }
   return(df)
@@ -437,20 +456,24 @@ convert_list_columns_to_strings <- function(df) {
 #' @param group_column Group column name
 #' @return List containing PCA results and plot
 #' @export
+#' @examples
+#' d <- load_lipidomics_data_from_df(generate_example_data())
+#' norm <- apply_normalizations(d$numeric_data, c("TIC", "Log2"))
+#' pca_res <- perform_pca(norm, d$metadata, "Sample Group")
+#' names(pca_res)
 perform_pca <- function(data_matrix, metadata, group_column = "Sample Group") {
-  
   # Ensure data is in correct format (samples as rows)
   if (ncol(data_matrix) < nrow(data_matrix)) {
     data_matrix <- t(data_matrix)
   }
-  
+
   # Remove any columns with zero variance
   var_cols <- apply(data_matrix, 2, stats::var, na.rm = TRUE) > 0
   data_matrix <- data_matrix[, var_cols, drop = FALSE]
-  
+
   # Perform PCA
   pca_results <- FactoMineR::PCA(data_matrix, scale.unit = TRUE, graph = FALSE)
-  
+
   # Create PCA plot data
   pca_data <- data.frame(
     Sample = rownames(data_matrix),
@@ -459,10 +482,10 @@ perform_pca <- function(data_matrix, metadata, group_column = "Sample Group") {
     Group = metadata[[group_column]],
     stringsAsFactors = FALSE
   )
-  
+
   # Create plot
-  variance_explained <- pca_results$eig[1:2, 2]
-  
+  variance_explained <- pca_results$eig[seq_len(2), 2]
+
   pca_plot <- ggplot2::ggplot(pca_data, ggplot2::aes(x = PC1, y = PC2, color = Group)) +
     ggplot2::geom_point(size = 4, alpha = 0.7) +
     ggplot2::labs(
@@ -472,7 +495,7 @@ perform_pca <- function(data_matrix, metadata, group_column = "Sample Group") {
     ) +
     ggplot2::theme_minimal() +
     ggplot2::theme(legend.position = "bottom")
-  
+
   return(list(
     pca_results = pca_results,
     pca_data = pca_data,
@@ -489,98 +512,108 @@ perform_pca <- function(data_matrix, metadata, group_column = "Sample Group") {
 #' @param n_comp Number of components
 #' @return List containing PLS-DA results and plot
 #' @export
+#' @examples
+#' d <- load_lipidomics_data_from_df(generate_example_data())
+#' norm <- apply_normalizations(d$numeric_data, c("TIC", "Log2"))
+#' res <- perform_plsda(norm, d$metadata, "Sample Group")
+#' names(res)
 perform_plsda <- function(data_matrix, metadata, group_column = "Sample Group", n_comp = 2) {
-  
-  tryCatch({
-    # CRITICAL FIX: Ensure it's a matrix, not a data.frame or list
-    if (!is.matrix(data_matrix)) {
-      message("Converting data to matrix")
-      data_matrix <- as.matrix(data_matrix)
+  tryCatch(
+    {
+      # CRITICAL FIX: Ensure it's a matrix, not a data.frame or list
+      if (!is.matrix(data_matrix)) {
+        message("Converting data to matrix")
+        data_matrix <- as.matrix(data_matrix)
+      }
+
+      # Ensure data is in correct format (samples as rows)
+      if (ncol(data_matrix) < nrow(data_matrix)) {
+        message("Transposing data matrix for PLS-DA")
+        data_matrix <- t(data_matrix)
+      }
+
+      # Remove any columns with zero variance
+      var_cols <- apply(data_matrix, 2, stats::var, na.rm = TRUE) > 0
+      data_matrix <- data_matrix[, var_cols, drop = FALSE]
+
+      message("PLS-DA data matrix dimensions: ", paste(dim(data_matrix), collapse = " x "))
+      message("PLS-DA metadata dimensions: ", paste(dim(metadata), collapse = " x "))
+
+      # Prepare data
+      groups <- factor(metadata[[group_column]])
+
+      # Check for sample correspondence
+      if (nrow(data_matrix) != length(groups)) {
+        stop(sprintf(
+          "Number of samples in data matrix (%d) does not match metadata (%d)",
+          nrow(data_matrix), length(groups)
+        ))
+      }
+
+      # Ensure we have at least 2 groups
+      if (length(levels(groups)) < 2) {
+        stop("PLS-DA requires at least 2 groups")
+      }
+
+      # Create dummy variables for groups
+      group_dummy <- stats::model.matrix(~ groups - 1)
+
+      # Handle column naming for stats::model.matrix() output
+      colnames(group_dummy) <- paste0("Group_", levels(groups))
+
+      message("Group dummy matrix dimensions: ", paste(dim(group_dummy), collapse = " x "))
+      message("Unique groups: ", paste(levels(groups), collapse = ", "))
+
+      # Perform PLS-DA using pls package
+      plsda_results <- pls::plsr(group_dummy ~ data_matrix, ncomp = n_comp, validation = "LOO")
+
+      # Extract scores
+      scores_data <- data.frame(
+        Sample = rownames(data_matrix),
+        Comp1 = plsda_results$scores[, 1],
+        Comp2 = if (n_comp > 1) plsda_results$scores[, 2] else rep(0, nrow(plsda_results$scores)),
+        Group = groups,
+        stringsAsFactors = FALSE
+      )
+
+      # Create plot
+      plsda_plot <- ggplot2::ggplot(scores_data, ggplot2::aes(x = Comp1, y = Comp2, color = Group)) +
+        ggplot2::geom_point(size = 4, alpha = 0.8) +
+        ggplot2::labs(
+          title = "PLS-DA Analysis",
+          x = "PLS-DA Component 1",
+          y = "PLS-DA Component 2"
+        ) +
+        ggplot2::theme_minimal() +
+        ggplot2::theme(legend.position = "bottom")
+
+      message("PLS-DA completed successfully")
+
+      return(list(
+        plsda_results = plsda_results,
+        scores_data = scores_data,
+        plot = plsda_plot
+      ))
+    },
+    error = function(e) {
+      # Single warning covers both notification and error propagation
+      warning("PLS-DA failed: ", conditionMessage(e), call. = FALSE)
+
+      # Fallback: create simple plot showing error
+      error_plot <- ggplot2::ggplot() +
+        ggplot2::annotate("text",
+          x = 0.5, y = 0.5,
+          label = paste("PLS-DA failed:", e$message),
+          size = 5
+        ) +
+        ggplot2::theme_void() +
+        ggplot2::labs(title = "PLS-DA Analysis (Error)")
+
+      return(list(
+        plsda_results = NULL,
+        scores_data = data.frame(),
+        plot = error_plot
+      ))
     }
-    
-    # Ensure data is in correct format (samples as rows)
-    if (ncol(data_matrix) < nrow(data_matrix)) {
-      message("Transposing data matrix for PLS-DA")
-      data_matrix <- t(data_matrix)
-    }
-    
-    # Remove any columns with zero variance
-    var_cols <- apply(data_matrix, 2, stats::var, na.rm = TRUE) > 0
-    data_matrix <- data_matrix[, var_cols, drop = FALSE]
-    
-    message("PLS-DA data matrix dimensions: ", paste(dim(data_matrix), collapse = " x "))
-    message("PLS-DA metadata dimensions: ", paste(dim(metadata), collapse = " x "))
-    
-    # Prepare data
-    groups <- factor(metadata[[group_column]])
-    
-    # Check for sample correspondence
-    if (nrow(data_matrix) != length(groups)) {
-      stop(paste("Number of samples in data matrix (", nrow(data_matrix), 
-                 ") doesn't match metadata (", length(groups), ")"))
-    }
-    
-    # Ensure we have at least 2 groups
-    if (length(levels(groups)) < 2) {
-      stop("PLS-DA requires at least 2 groups")
-    }
-    
-    # Create dummy variables for groups
-    group_dummy <- stats::model.matrix(~ groups - 1)
-    
-    # Handle column naming for stats::model.matrix() output
-    colnames(group_dummy) <- paste0("Group_", levels(groups))
-    
-    message("Group dummy matrix dimensions: ", paste(dim(group_dummy), collapse = " x "))
-    message("Unique groups: ", paste(levels(groups), collapse = ", "))
-    
-    # Perform PLS-DA using pls package
-    plsda_results <- pls::plsr(group_dummy ~ data_matrix, ncomp = n_comp, validation = "LOO")
-    
-    # Extract scores
-    scores_data <- data.frame(
-      Sample = rownames(data_matrix),
-      Comp1 = plsda_results$scores[, 1],
-      Comp2 = if(n_comp > 1) plsda_results$scores[, 2] else rep(0, nrow(plsda_results$scores)),
-      Group = groups,
-      stringsAsFactors = FALSE
-    )
-    
-    # Create plot
-    plsda_plot <- ggplot2::ggplot(scores_data, ggplot2::aes(x = Comp1, y = Comp2, color = Group)) +
-      ggplot2::geom_point(size = 4, alpha = 0.8) +
-      ggplot2::labs(
-        title = "PLS-DA Analysis",
-        x = "PLS-DA Component 1",
-        y = "PLS-DA Component 2"
-      ) +
-      ggplot2::theme_minimal() +
-      ggplot2::theme(legend.position = "bottom")
-    
-    message("PLS-DA completed successfully")
-    
-    return(list(
-      plsda_results = plsda_results,
-      scores_data = scores_data,
-      plot = plsda_plot
-    ))
-    
-  }, error = function(e) {
-    message("PLS-DA failed with error: ", e$message)
-    warning(paste("PLS-DA failed:", e$message))
-    
-    # Fallback: create simple plot showing error
-    error_plot <- ggplot2::ggplot() +
-      ggplot2::annotate("text", x = 0.5, y = 0.5, 
-                        label = paste("PLS-DA failed:", e$message),
-                        size = 5) +
-      ggplot2::theme_void() +
-      ggplot2::labs(title = "PLS-DA Analysis (Error)")
-    
-    return(list(
-      plsda_results = NULL,
-      scores_data = data.frame(),
-      plot = error_plot
-    ))
-  })
+  )
 }

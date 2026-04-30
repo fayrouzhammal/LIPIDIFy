@@ -29,3 +29,10 @@ List containing results for each contrast
 \description{
 Perform Differential Analysis
 }
+\examples{
+d <- load_lipidomics_data_from_df(generate_example_data())
+norm <- apply_normalizations(d$numeric_data, c("TIC", "Log2"))
+res <- perform_differential_analysis(norm, d$metadata, "Sample Group",
+  contrasts_list = NULL, method = "limma")
+names(res)
+}

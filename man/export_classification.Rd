@@ -18,8 +18,8 @@ Invisibly returns \code{TRUE} on success.
 Export Lipid Classification to CSV
 }
 \examples{
-\dontrun{
 cls <- classify_lipids(c("PC 16:0_18:1", "PE 18:0_20:4"))
-export_classification(cls, "lipid_classification.csv")
-}
+tmp <- tempfile(fileext = ".csv")
+export_classification(cls, tmp)
+unlink(tmp)
 }

@@ -27,7 +27,10 @@ A lipid may appear in multiple rows to belong to multiple sets.
 \dontrun{
 custom_sets <- load_custom_enrichment_sets("my_sets.csv")
 }
-\dontrun{
-sets <- load_custom_enrichment_sets("my_sets.csv")
-}
+tmp <- tempfile(fileext = ".csv")
+write.csv(data.frame(Lipid = c("PC 16:0_18:1","PE 18:0"),
+                     Set_Name = c("Phospholipids","Phospholipids")),
+          tmp, row.names = FALSE)
+sets <- load_custom_enrichment_sets(tmp)
+unlink(tmp)
 }

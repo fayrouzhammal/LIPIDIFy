@@ -53,7 +53,7 @@ library(LIPIDIFy)
 launch_lipidomics_app()
 ```
 
----
+***
 
 ## Step 1 - Load the Example Dataset
 
@@ -88,7 +88,7 @@ head(data_obj$metadata[, c("Sample Name", "Sample Group", "Tumour ID")], 4)
 data_obj$numeric_data[1:4, 1:3]
 ```
 
----
+***
 
 ## Step 2 - Lipid Classification
 
@@ -113,7 +113,7 @@ cat("\nFatty-acid saturation:\n")
 print(table(classification$Saturation))
 ```
 
----
+***
 
 ## Step 3 - Raw Data Visualization
 
@@ -143,7 +143,7 @@ visualize_raw_data_improved(
 )
 ```
 
----
+***
 
 ## Step 4 - Normalization
 
@@ -199,7 +199,7 @@ visualize_raw_data_improved(
 )
 ```
 
----
+***
 
 ## Step 5 - Quality Control with PCA
 
@@ -218,7 +218,7 @@ create_pca_plot_with_ellipses(
 )
 ```
 
----
+***
 
 ## Step 6 - Differential Analysis
 
@@ -277,7 +277,7 @@ cat("Top 10 features in:", first_contrast, "\n\n")
 print(top10)
 ```
 
----
+***
 
 ## Step 7 - Results Visualization
 
@@ -324,7 +324,7 @@ if (length(sig_lipids) >= 5) {
 }
 ```
 
----
+***
 
 ## Step 8 - Lipid Expression
 
@@ -357,7 +357,7 @@ if (inherits(expr_result, "ggplot")) {
 }
 ```
 
----
+***
 
 ## Step 9 - Enrichment Analysis
 
@@ -417,7 +417,7 @@ if (!is.null(grp_enrich) && nrow(grp_enrich) > 0) {
 }
 ```
 
----
+***
 
 ## Session Information
 

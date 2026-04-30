@@ -16,3 +16,7 @@ PQN-normalized matrix.
 Probabilistic Quotient Normalization. Uses the per-feature median across
 samples as the reference spectrum.
 }
+\examples{
+m <- matrix(c(1000,2000,3000,4000,500,1500), nrow = 2)
+normalize_pqn(m)
+}
