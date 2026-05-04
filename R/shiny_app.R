@@ -114,10 +114,10 @@ launch_lipidomics_app <- function(port = NULL) {
       shinydashboard::sidebarMenu(
         shinydashboard::menuItem("Welcome", tabName = "welcome", icon = shiny::icon("info-circle")),
         shinydashboard::menuItem("Data Upload", tabName = "upload", icon = shiny::icon("upload")),
-        shinydashboard::menuItem("Preprocessing", tabName = "preprocessing", icon = shiny::icon("filter")),
         shinydashboard::menuItem("Lipid Classification", tabName = "classification", icon = shiny::icon("tags")),
         shinydashboard::menuItem("Raw Data Visualization", tabName = "raw_viz", icon = shiny::icon("chart-line")),
         shinydashboard::menuItem("Normalization", tabName = "normalization", icon = shiny::icon("balance-scale")),
+        shinydashboard::menuItem("Preprocessing", tabName = "preprocessing", icon = shiny::icon("filter")),
         shinydashboard::menuItem("Normalized Data Viz", tabName = "norm_viz", icon = shiny::icon("chart-bar")),
         shinydashboard::menuItem("Lipid Expression", tabName = "lipid_expression", icon = shiny::icon("flask")),
         shinydashboard::menuItem("Differential Analysis", tabName = "diff_analysis", icon = shiny::icon("calculator")),
@@ -590,97 +590,6 @@ Methods are applied left-to-right in the order you select them.
         ),
 
         # ------------------------------------------------------------------
-        # Preprocessing (Imputation + Batch correction)
-        # ------------------------------------------------------------------
-        shinydashboard::tabItem(
-          tabName = "preprocessing",
-          shiny::fluidRow(
-            shinydashboard::box(
-              title = "Missing Value Imputation", status = "primary",
-              solidHeader = TRUE, width = 6,
-              shiny::p(
-                "Replace missing values (NA) ", shiny::strong("before"),
-                " normalisation so that per-sample scaling factors are not biased."
-              ),
-              shiny::verbatimTextOutput("missing_value_summary"),
-              shiny::hr(),
-              shiny::selectInput(
-                "imputation_method", "Imputation Method:",
-                choices = get_imputation_methods(),
-                selected = "half_min"
-              ),
-              shiny::conditionalPanel(
-                condition = "input.imputation_method == 'knn'",
-                shiny::numericInput("imputation_k",
-                  "Number of Neighbours (k):",
-                  value = 5L, min = 2L, max = 20L
-                )
-              ),
-              shiny::actionLink("info_imputation", " Method Descriptions",
-                icon = shiny::icon("info-circle")
-              ),
-              shiny::br(), shiny::br(),
-              shiny::actionButton("run_imputation", "Apply Imputation",
-                class = "btn-primary"
-              ),
-              shiny::br(), shiny::br(),
-              shiny::actionButton("reset_imputation",
-                "Reset to Raw Data",
-                class  = "btn-warning",
-                icon   = shiny::icon("undo")
-              )
-            ),
-            shinydashboard::box(
-              title = "Batch Effect Correction", status = "primary",
-              solidHeader = TRUE, width = 6,
-              shiny::p(
-                "Remove known technical batch effects while preserving ",
-                "biological signal. Apply ", shiny::strong("after"),
-                " normalisation."
-              ),
-              shiny::helpText(
-                "Requires a batch column in your metadata (e.g. run date, ",
-                "instrument, operator). The biological group column is ",
-                "automatically protected from removal."
-              ),
-              shiny::selectInput("batch_column",
-                "Batch Column in Metadata:", choices = NULL
-              ),
-              shiny::selectInput("batch_method", "Method:",
-                choices = c(
-                  "limma - removeBatchEffect (recommended)" = "limma",
-                  "ComBat - sva package (robust for large effects)"  = "combat"
-                )
-              ),
-              shiny::selectInput("batch_group_column",
-                "Group Column to Protect:", choices = NULL
-              ),
-              shiny::actionLink("info_batch", " Batch Correction Help",
-                icon = shiny::icon("info-circle")
-              ),
-              shiny::br(), shiny::br(),
-              shiny::actionButton("run_batch_correction",
-                "Apply Batch Correction",
-                class = "btn-primary"
-              ),
-              shiny::br(), shiny::br(),
-              shiny::actionButton("reset_batch_correction",
-                "Reset to Pre-Batch Data",
-                class = "btn-warning",
-                icon  = shiny::icon("undo")
-              )
-            )
-          ),
-          shiny::fluidRow(
-            shinydashboard::box(
-              title = "Preprocessing Status", status = "info",
-              solidHeader = TRUE, width = 12,
-              shiny::verbatimTextOutput("preprocessing_status")
-            )
-          )
-        ),
-
-        # ------------------------------------------------------------------
         # Classification
         # ------------------------------------------------------------------
         shinydashboard::tabItem(
@@ -721,35 +630,6 @@ Methods are applied left-to-right in the order you select them.
               title = "Current Classification", status = "info",
               solidHeader = TRUE, width = 6,
               DT::dataTableOutput("classification_table")
-            )
-          ),
-          shiny::fluidRow(
-            shinydashboard::box(
-              title = "LIPID MAPS Database Annotation", status = "warning",
-              solidHeader = TRUE, width = 12,
-              shiny::p(
-                "Enrich the classification table with LIPID MAPS identifiers, ",
-                "exact masses, molecular formulas, and ontology classes by ",
-                "querying the LIPID MAPS Structure Database (LMSD) REST API."
-              ),
-              shiny::helpText(
-                "Requires an internet connection. Allow approximately 0.3 s ",
-                "per lipid. For datasets > 200 lipids, run in batches."
-              ),
-              shiny::actionButton("run_lipidmaps",
-                "Annotate with LIPID MAPS",
-                class = "btn-warning",
-                icon  = shiny::icon("database")
-              ),
-              shiny::br(), shiny::br(),
-              shiny::verbatimTextOutput("lipidmaps_status"),
-              shiny::conditionalPanel(
-                condition = "output.lipidmaps_status != ''",
-                shiny::downloadButton("download_lipidmaps_annotation",
-                  "Download Annotated Classification (CSV)",
-                  class = "btn-success"
-                )
-              )
             )
           )
         ),
@@ -884,6 +764,98 @@ Methods are applied left-to-right in the order you select them.
                 "Download Comparison",
                 class = "btn-success"
               )
+            )
+          )
+        ),
+
+        # ------------------------------------------------------------------
+        # Preprocessing (Imputation + Batch correction) — applied post-normalisation
+        # ------------------------------------------------------------------
+        shinydashboard::tabItem(
+          tabName = "preprocessing",
+          shiny::fluidRow(
+            shinydashboard::box(
+              title = "Missing Value Imputation", status = "primary",
+              solidHeader = TRUE, width = 6,
+              shiny::p(
+                "Replace missing values (NA) in the ", shiny::strong("normalised"),
+                " data. Imputing after normalisation ensures imputed values ",
+                "are on the same scale as observed values."
+              ),
+              shiny::verbatimTextOutput("missing_value_summary"),
+              shiny::hr(),
+              shiny::selectInput(
+                "imputation_method", "Imputation Method:",
+                choices = get_imputation_methods(),
+                selected = "half_min"
+              ),
+              shiny::conditionalPanel(
+                condition = "input.imputation_method == 'knn'",
+                shiny::numericInput("imputation_k",
+                  "Number of Neighbours (k):",
+                  value = 5L, min = 2L, max = 20L
+                )
+              ),
+              shiny::actionLink("info_imputation", " Method Descriptions",
+                icon = shiny::icon("info-circle")
+              ),
+              shiny::br(), shiny::br(),
+              shiny::actionButton("run_imputation", "Apply Imputation",
+                class = "btn-primary"
+              ),
+              shiny::br(), shiny::br(),
+              shiny::actionButton("reset_imputation",
+                "Reset to Pre-Imputation Data",
+                class  = "btn-warning",
+                icon   = shiny::icon("undo")
+              )
+            ),
+            shinydashboard::box(
+              title = "Batch Effect Correction", status = "primary",
+              solidHeader = TRUE, width = 6,
+              shiny::p(
+                "Remove known technical batch effects while preserving ",
+                "biological signal."
+              ),
+              shiny::helpText(
+                "Requires a dedicated batch column in your metadata ",
+                "(e.g. 'Run', 'Plate', 'Batch'). If your CSV only has ",
+                "'Sample Name' and 'Sample Group', add a batch column ",
+                "and reload the data before using this feature."
+              ),
+              shiny::selectInput("batch_column",
+                "Batch Column in Metadata:", choices = NULL
+              ),
+              shiny::selectInput("batch_method", "Method:",
+                choices = c(
+                  "limma - removeBatchEffect (recommended)" = "limma",
+                  "ComBat - sva package (robust for large effects)"  = "combat"
+                )
+              ),
+              shiny::selectInput("batch_group_column",
+                "Group Column to Protect:", choices = NULL
+              ),
+              shiny::actionLink("info_batch", " Batch Correction Help",
+                icon = shiny::icon("info-circle")
+              ),
+              shiny::br(), shiny::br(),
+              shiny::actionButton("run_batch_correction",
+                "Apply Batch Correction",
+                class = "btn-primary"
+              ),
+              shiny::br(), shiny::br(),
+              shiny::actionButton("reset_batch_correction",
+                "Reset to Pre-Batch Data",
+                class = "btn-warning",
+                icon  = shiny::icon("undo")
+              )
+            )
+          ),
+          shiny::fluidRow(
+            shinydashboard::box(
+              title = "Preprocessing Status", status = "info",
+              solidHeader = TRUE, width = 12,
+              shiny::verbatimTextOutput("preprocessing_status")
             )
           )
         ),
@@ -1311,14 +1283,14 @@ Methods are applied left-to-right in the order you select them.
     # ---- Reactive state ---------------------------------------------------
     values <- shiny::reactiveValues(
       raw_data = NULL,
-      imputed_data = NULL,          # numeric_data after imputation (pre-norm)
+      imputed_data = NULL,          # kept for legacy; use pre_impute_data
+      pre_impute_data = NULL,       # normalized_data snapshot before imputation
       normalized_data = NULL,
       pre_batch_data = NULL,        # normalized_data snapshot before batch correction
       classification = NULL,
       custom_classification = NULL,
       use_custom_classification = FALSE,
       classification_data = NULL,
-      lm_annotation = NULL,         # LIPID MAPS annotation data frame
       diff_results = NULL,
       available_contrasts = NULL,
       custom_enrichment_sets = NULL,
@@ -1412,6 +1384,28 @@ Methods are applied left-to-right in the order you select them.
     register_select_all_observers(
       session, input, "report_sections",
       function() c("data_summary", "normalization", "diff_analysis", "enrichment")
+    )
+    register_select_all_observers(
+      session, input, "raw_filter_groups",
+      function() {
+        shiny::req(values$raw_data)
+        if ("Sample Group" %in% names(values$raw_data$metadata)) {
+          unique(values$raw_data$metadata$`Sample Group`)
+        } else {
+          character(0)
+        }
+      }
+    )
+    register_select_all_observers(
+      session, input, "norm_filter_groups",
+      function() {
+        shiny::req(values$raw_data)
+        if ("Sample Group" %in% names(values$raw_data$metadata)) {
+          unique(values$raw_data$metadata$`Sample Group`)
+        } else {
+          character(0)
+        }
+      }
     )
 
     # ---- Load example data -----------------------------------------------
@@ -1731,14 +1725,7 @@ Methods are applied left-to-right in the order you select them.
             input$norm_methods_2
           }
 
-          # Use imputed data if imputation has been applied, else raw
-          source_matrix <- if (!is.null(values$imputed_data)) {
-            values$imputed_data
-          } else {
-            values$raw_data$numeric_data
-          }
-
-          norm_mat <- apply_normalizations(source_matrix, methods)
+          norm_mat <- apply_normalizations(values$raw_data$numeric_data, methods)
 
           if (!is.null(rownames(values$raw_data$numeric_data))) {
             rownames(norm_mat) <- rownames(values$raw_data$numeric_data)
@@ -2369,11 +2356,13 @@ Methods are applied left-to-right in the order you select them.
 
     # ---- Preprocessing: missing value summary ----------------------------
     output$missing_value_summary <- shiny::renderText({
-      shiny::req(values$raw_data)
-      m <- values$raw_data$numeric_data
+      if (is.null(values$normalized_data)) {
+        return("Apply normalisation first, then return here to impute.")
+      }
+      m       <- values$normalized_data$numeric_data
       n_miss  <- sum(is.na(m))
       pct     <- round(100 * n_miss / length(m), 2)
-      imputed <- !is.null(values$imputed_data)
+      imputed <- !is.null(values$pre_impute_data)
       paste0(
         "Total values  : ", length(m), "\n",
         "Missing (NA)  : ", n_miss, " (", pct, "%)\n",
@@ -2383,25 +2372,49 @@ Methods are applied left-to-right in the order you select them.
 
     # ---- Preprocessing: imputation ---------------------------------------
     shiny::observeEvent(input$run_imputation, {
-      shiny::req(values$raw_data)
+      if (is.null(values$normalized_data)) {
+        shiny::showNotification(
+          "Please apply normalisation first, then return here to impute.",
+          type = "warning", duration = 6
+        )
+        return()
+      }
       tryCatch({
         k_val <- if (input$imputation_method == "knn") input$imputation_k else 5L
-        imp   <- impute_missing_values(
-          values$raw_data$numeric_data,
+
+        # Snapshot for reset
+        values$pre_impute_data <- values$normalized_data
+
+        imp <- impute_missing_values(
+          values$normalized_data$numeric_data,
           method = input$imputation_method,
           k      = k_val
         )
-        values$imputed_data <- imp
+
+        md <- values$normalized_data$metadata
+        values$normalized_data <- list(
+          data         = cbind(md, imp),
+          metadata     = md,
+          numeric_data = imp
+        )
         shiny::showNotification(
-          paste("Imputation applied:", input$imputation_method),
+          paste("Imputation applied to normalised data:", input$imputation_method),
           type = "message"
         )
       }, error = function(e) show_error(e, "Imputation"))
     })
 
     shiny::observeEvent(input$reset_imputation, {
-      values$imputed_data <- NULL
-      shiny::showNotification("Imputation reset. Using raw data.", type = "message")
+      if (is.null(values$pre_impute_data)) {
+        shiny::showNotification("No imputation to reset.", type = "warning")
+        return()
+      }
+      values$normalized_data  <- values$pre_impute_data
+      values$pre_impute_data  <- NULL
+      shiny::showNotification(
+        "Imputation reset. Pre-imputation normalised data restored.",
+        type = "message"
+      )
     })
 
     shiny::observeEvent(input$info_imputation, {
@@ -2423,29 +2436,103 @@ Methods are applied left-to-right in the order you select them.
 
     # ---- Preprocessing: batch correction --------------------------------
     shiny::observeEvent(input$run_batch_correction, {
-      shiny::req(values$normalized_data, input$batch_column)
+      # -- Guard 1: normalisation must be applied first ----------------------
+      if (is.null(values$normalized_data)) {
+        shiny::showNotification(
+          "Please apply normalisation first (Normalisation tab) before batch correction.",
+          type = "warning", duration = 6
+        )
+        return()
+      }
+
+      # -- Guard 2: batch column must exist in metadata ----------------------
+      md <- values$normalized_data$metadata
+      if (is.null(input$batch_column) || !nzchar(input$batch_column) ||
+          !input$batch_column %in% colnames(md)) {
+        shiny::showNotification(
+          paste0("No valid batch column selected. Add a batch column to your ",
+                 "CSV (e.g. 'Batch', 'Run', 'Plate') and reload the data."),
+          type = "warning", duration = 8
+        )
+        return()
+      }
+
+      # -- Guard 3: batch column must have 2...(n-1) unique values -----------
+      batch_vals <- md[[input$batch_column]]
+      n_batches  <- length(unique(batch_vals[!is.na(batch_vals)]))
+      n_samples  <- nrow(md)
+
+      if (n_batches < 2L) {
+        shiny::showNotification(
+          paste0("The selected batch column ('", input$batch_column,
+                 "') has only one unique value. ",
+                 "Choose a column where samples are labelled by their batch ",
+                 "(e.g. run date, plate ID, instrument run)."),
+          type = "error", duration = 10
+        )
+        return()
+      }
+      if (n_batches == n_samples) {
+        shiny::showNotification(
+          paste0("Every sample has a unique value in '", input$batch_column,
+                 "'. Batch correction requires multiple samples per batch. ",
+                 "Select a column that groups samples into 2 or more shared batches."),
+          type = "error", duration = 10
+        )
+        return()
+      }
+
+      # -- Guard 4: warn if batch column is same as group column -------------
+      # This is statistically questionable (removes biology alongside batch),
+      # but we allow it with a warning. The collinearity check inside
+      # correct_batch_effects() will handle complete confounding gracefully.
+      if (!is.null(input$batch_group_column) &&
+          input$batch_column == input$batch_group_column) {
+        shiny::showNotification(
+          paste0("Note: batch column and group column are the same ('",
+                 input$batch_column, "'). Group protection will be disabled ",
+                 "to avoid collinearity. Consider adding a dedicated batch ",
+                 "column (e.g. run date or plate ID) to your data file."),
+          type = "warning", duration = 10
+        )
+      }
+
       tryCatch({
-        # Store snapshot before correction for potential reset
+        # Snapshot metadata before any assignment (avoids reactive mid-read)
+        snap_md  <- values$normalized_data$metadata
+        snap_mat <- values$normalized_data$numeric_data
+
+        # Store full snapshot for reset
         values$pre_batch_data <- values$normalized_data
 
         corrected_mat <- correct_batch_effects(
-          data_matrix  = values$normalized_data$numeric_data,
-          metadata     = values$normalized_data$metadata,
+          data_matrix  = snap_mat,
+          metadata     = snap_md,
           batch_column = input$batch_column,
           group_column = input$batch_group_column,
           method       = input$batch_method
         )
 
         values$normalized_data <- list(
-          data         = cbind(values$normalized_data$metadata, corrected_mat),
-          metadata     = values$normalized_data$metadata,
+          data         = cbind(snap_md, corrected_mat),
+          metadata     = snap_md,
           numeric_data = corrected_mat
         )
         shiny::showNotification(
-          paste("Batch correction applied:", input$batch_method),
-          type = "message"
+          paste0("Batch correction applied using ", input$batch_method,
+                 ". Verify the result with a PCA plot."),
+          type = "message", duration = 6
         )
-      }, error = function(e) show_error(e, "Batch correction"))
+      }, error = function(e) {
+        # Roll back snapshot so normalized_data stays valid
+        values$normalized_data <- values$pre_batch_data
+        values$pre_batch_data  <- NULL
+        shiny::showNotification(
+          paste0("Batch correction failed: ", conditionMessage(e),
+                 ". Check that batch and group columns are not perfectly confounded."),
+          type = "error", duration = 12
+        )
+      })
     })
 
     shiny::observeEvent(input$reset_batch_correction, {
@@ -2486,67 +2573,14 @@ Methods are applied left-to-right in the order you select them.
     output$preprocessing_status <- shiny::renderText({
       paste0(
         "Data loaded      : ", !is.null(values$raw_data), "\n",
-        "Imputation       : ",
-        if (!is.null(values$imputed_data)) "Applied" else "Not applied", "\n",
         "Normalisation    : ",
         if (!is.null(values$normalized_data)) "Applied" else "Not applied", "\n",
+        "Imputation       : ",
+        if (!is.null(values$pre_impute_data)) "Applied" else "Not applied", "\n",
         "Batch correction : ",
         if (!is.null(values$pre_batch_data)) "Applied" else "Not applied"
       )
     })
-
-    # ---- LIPID MAPS annotation ------------------------------------------
-    shiny::observeEvent(input$run_lipidmaps, {
-      shiny::req(values$classification_data)
-      tryCatch({
-        lipid_names <- values$classification_data$Lipid
-        n           <- length(lipid_names)
-        prog <- shiny::showNotification(
-          paste0("Querying LIPID MAPS for ", n, " lipids (~",
-                 round(n * 0.3 / 60, 1), " min)... please wait."),
-          duration = NULL, type = "message"
-        )
-        on.exit(try(shiny::removeNotification(prog), silent = TRUE))
-
-        lm_ann <- annotate_with_lipidmaps(lipid_names, verbose = FALSE)
-
-        # Merge annotation into classification table
-        cls_ann <- merge(
-          values$classification_data,
-          lm_ann[, setdiff(colnames(lm_ann), "Lipid"), drop = FALSE] |>
-            cbind(Lipid = lm_ann$Lipid),
-          by = "Lipid", all.x = TRUE
-        )
-        values$lm_annotation <- cls_ann
-
-        n_matched <- sum(!is.na(lm_ann$LipidMaps_ID))
-        shiny::showNotification(
-          paste0("LIPID MAPS annotation complete: ",
-                 n_matched, "/", n, " lipids matched."),
-          type = "message"
-        )
-      }, error = function(e) show_error(e, "LIPID MAPS annotation"))
-    })
-
-    output$lipidmaps_status <- shiny::renderText({
-      if (is.null(values$lm_annotation)) return("")
-      n        <- nrow(values$lm_annotation)
-      n_match  <- sum(!is.na(values$lm_annotation$LipidMaps_ID))
-      paste0(
-        "Annotation complete.\n",
-        "Lipids queried : ", n, "\n",
-        "Matched (LMID) : ", n_match, " (", round(100 * n_match / n, 1), "%)\n",
-        "Unmatched      : ", n - n_match
-      )
-    })
-
-    output$download_lipidmaps_annotation <- shiny::downloadHandler(
-      filename = function() .dl_name("classification_lipidmaps", ext = "csv"),
-      content = function(file) {
-        shiny::req(values$lm_annotation)
-        utils::write.csv(values$lm_annotation, file, row.names = FALSE)
-      }
-    )
 
     # ---- Report status ---------------------------------------------------
     output$report_status <- shiny::renderText({
@@ -3030,9 +3064,19 @@ Methods are applied left-to-right in the order you select them.
     }
   )
   # Batch correction selectors
+  # "Sample Name" is never a valid batch variable (every sample is unique)
+  # so exclude it from choices. Also exclude numeric-ish columns like Weight.
+  batch_candidates <- cols[!cols %in% c("Sample Name")]
+  batch_default <- if (length(batch_candidates) > 0) {
+    # Prefer a column that is neither Sample Name nor Sample Group
+    non_bio <- batch_candidates[!batch_candidates %in% c("Sample Group")]
+    if (length(non_bio) > 0) non_bio[1] else batch_candidates[1]
+  } else {
+    NULL
+  }
   shiny::updateSelectInput(session, "batch_column",
-    choices  = cols,
-    selected = cols[1]
+    choices  = batch_candidates,
+    selected = batch_default
   )
   shiny::updateSelectInput(session, "batch_group_column",
     choices  = cols,

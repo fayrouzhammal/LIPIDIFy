@@ -838,14 +838,36 @@ correct_batch_effects <- function(data_matrix,
 
   batch <- as.factor(as.character(metadata[[batch_column]]))
 
-  # Build a design matrix to protect biological signal
+  # Build a design matrix to protect biological signal.
+  # If the group structure is perfectly confounded with batch (i.e. the design
+  # matrix is rank-deficient after including batch), limma::removeBatchEffect
+  # will throw a cryptic error. We detect this and fall back to correcting
+  # without group protection, emitting a warning instead.
   design_protect <- NULL
   if (!is.null(group_column) && group_column %in% colnames(metadata)) {
     groups         <- factor(make.names(as.character(metadata[[group_column]])))
-    design_protect <- stats::model.matrix(~ groups)
+    design_raw     <- stats::model.matrix(~ groups)
+
+    # Check rank: combine batch indicator columns with the group design and
+    # test whether the full matrix is full-rank.
+    batch_dummy  <- stats::model.matrix(~ batch - 1)
+    combined     <- cbind(design_raw, batch_dummy)
+    if (qr(combined)$rank < ncol(combined)) {
+      warning(
+        "The group column ('", group_column, "') is perfectly confounded with ",
+        "the batch column ('", batch_column, "'). ",
+        "Proceeding without group protection -- all between-group variance may ",
+        "be removed. Consider a design where batches contain samples from ",
+        "multiple groups.",
+        call. = FALSE
+      )
+      design_protect <- NULL
+    } else {
+      design_protect <- design_raw
+    }
   }
 
-  # limma and ComBat expect features × samples
+  # limma and ComBat expect features x samples
   data_t <- t(data_matrix)
 
   corrected_t <- switch(method,
@@ -882,134 +904,3 @@ correct_batch_effects <- function(data_matrix,
   corrected
 }
 
-
-# ---------------------------------------------------------------------------
-# LIPID MAPS REST API annotation
-# ---------------------------------------------------------------------------
-
-#' Annotate Lipid Names Using the LIPID MAPS REST API
-#'
-#' Queries the LIPID MAPS Structure Database (LMSD) for each supplied lipid
-#' name and returns a data frame enriched with LIPID MAPS identifiers,
-#' chemical properties, and ontology classes.
-#'
-#' @param lipid_names Character vector of lipid names to query.
-#' @param timeout Numeric. HTTP timeout in seconds per query (default
-#'   \code{10}). Increase for slow connections or large queries.
-#' @param verbose Logical. If \code{TRUE}, prints per-lipid progress
-#'   messages (default \code{FALSE}).
-#' @return A data frame with one row per input lipid and columns:
-#'   \describe{
-#'     \item{\code{Lipid}}{Input lipid name.}
-#'     \item{\code{LipidMaps_ID}}{LIPID MAPS unique identifier (LMID).}
-#'     \item{\code{CommonName}}{Common/trivial name from LMSD.}
-#'     \item{\code{SystematicName}}{IUPAC systematic name.}
-#'     \item{\code{ExactMass}}{Exact monoisotopic mass (Da).}
-#'     \item{\code{Formula}}{Molecular formula.}
-#'     \item{\code{MainClass}}{LIPID MAPS main class.}
-#'     \item{\code{SubClass}}{LIPID MAPS sub-class.}
-#'   }
-#'   Lipids with no LMSD match have \code{NA} in all database columns.
-#' @details
-#'   Requires an active internet connection. The function waits 0.3 s
-#'   between requests to avoid overloading the server. For datasets with
-#'   more than 200 lipids, consider running the function in batches across
-#'   sessions.
-#'
-#'   LIPID MAPS REST API documentation:
-#'   \url{https://www.lipidmaps.org/resources/rest}
-#' @export
-#' @examples
-#' \donttest{
-#'   ann <- annotate_with_lipidmaps(c("PC(16:0/18:1)", "TG(16:0/18:1/20:4)"))
-#'   print(ann)
-#' }
-annotate_with_lipidmaps <- function(lipid_names,
-                                     timeout = 10,
-                                     verbose = FALSE) {
-  if (!requireNamespace("jsonlite", quietly = TRUE)) {
-    stop(
-      "Package 'jsonlite' is required for LIPID MAPS annotation. ",
-      "Install with: install.packages('jsonlite')",
-      call. = FALSE
-    )
-  }
-
-  empty_row <- function(name) {
-    data.frame(
-      Lipid          = name,
-      LipidMaps_ID   = NA_character_,
-      CommonName     = NA_character_,
-      SystematicName = NA_character_,
-      ExactMass      = NA_real_,
-      Formula        = NA_character_,
-      MainClass      = NA_character_,
-      SubClass       = NA_character_,
-      stringsAsFactors = FALSE
-    )
-  }
-
-  query_one <- function(name) {
-    encoded <- utils::URLencode(name, reserved = TRUE)
-    url     <- paste0(
-      "https://www.lipidmaps.org/rest/compound/name/",
-      encoded, "/all/json"
-    )
-
-    tryCatch({
-      con <- url(url, open = "")
-      on.exit(try(close(con), silent = TRUE))
-      raw <- jsonlite::fromJSON(url, simplifyDataFrame = TRUE)
-
-      if (is.null(raw) || length(raw) == 0L ||
-          (is.data.frame(raw) && nrow(raw) == 0L)) {
-        return(empty_row(name))
-      }
-
-      r <- if (is.data.frame(raw)) raw[1L, ] else as.data.frame(as.list(raw))
-
-      data.frame(
-        Lipid          = name,
-        LipidMaps_ID   = .lm_field(r, c("lm_id",       "LM_ID")),
-        CommonName     = .lm_field(r, c("common_name",  "NAME")),
-        SystematicName = .lm_field(r, c("sys_name",     "SYSTEMATIC_NAME")),
-        ExactMass      = suppressWarnings(
-          as.numeric(.lm_field(r, c("exact_mass", "EXACT_MASS")))
-        ),
-        Formula        = .lm_field(r, c("formula",      "FORMULA")),
-        MainClass      = .lm_field(r, c("main_class",   "MAIN_CLASS")),
-        SubClass       = .lm_field(r, c("sub_class",    "SUB_CLASS")),
-        stringsAsFactors = FALSE
-      )
-    },
-    error = function(e) {
-      if (verbose) message("  Could not annotate '", name, "': ", e$message)
-      empty_row(name)
-    })
-  }
-
-  n       <- length(lipid_names)
-  results <- vector("list", n)
-
-  for (i in seq_len(n)) {
-    if (verbose) message(sprintf("[%d/%d] Querying: %s", i, n, lipid_names[i]))
-    results[[i]] <- query_one(lipid_names[i])
-    if (i < n) Sys.sleep(0.3)   # polite rate limiting
-  }
-
-  out <- do.call(rbind, results)
-  rownames(out) <- NULL
-  out
-}
-
-# Internal: safely extract a field from a one-row data frame,
-# trying candidate column names in order.
-.lm_field <- function(row, candidates) {
-  for (cn in candidates) {
-    v <- row[[cn]]
-    if (!is.null(v) && length(v) == 1L && !is.na(v) && nchar(as.character(v)) > 0L) {
-      return(as.character(v))
-    }
-  }
-  NA_character_
-}

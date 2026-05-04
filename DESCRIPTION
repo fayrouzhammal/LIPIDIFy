@@ -12,11 +12,9 @@ Description: Provides a comprehensive toolkit for end-to-end lipidomics data
     normalization, differential abundance analysis using limma and edgeR,
     gene set enrichment analysis, and extensive visualization capabilities.
     Lipid names are automatically classified by class, subclass, and fatty-acid
-    saturation, with optional annotation against the LIPID MAPS Structure
-    Database (LMSD) via its REST API. Features both an interactive Shiny
-    interface for bench biologists and fully scriptable R functions for
-    bioinformaticians. Supports flexible custom lipid classification schemes
-    and user-defined enrichment sets.
+    saturation. Features both an interactive Shiny interface for bench biologists
+    and fully scriptable R functions for bioinformaticians. Supports flexible
+    custom lipid classification schemes and user-defined enrichment sets.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: false
@@ -43,7 +41,6 @@ Imports:
     openxlsx,
     rmarkdown,
     stringr,
-    jsonlite,
     utils,
     stats,
     grDevices
@@ -58,7 +55,7 @@ VignetteBuilder: knitr
 biocViews: Lipidomics, MassSpectrometry, Normalization, Preprocessing,
     DifferentialExpression, GeneSetEnrichment, Visualization,
     ShinyApps, MultipleComparison, BatchEffect, QualityControl,
-    DataImport, Annotation
+    DataImport
 RoxygenNote: 7.3.3
 URL: https://github.com/fayrouzhammal/LIPIDIFy
 BugReports: https://github.com/fayrouzhammal/LIPIDIFy/issues

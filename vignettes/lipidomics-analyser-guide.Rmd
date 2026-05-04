@@ -215,12 +215,14 @@ if (is.list(plots)) {
 }
 ```
 
+# Normalization
+
 # Missing Value Imputation
 
 Missing values in lipidomics data arise when a lipid's signal falls below
 the instrument's limit of detection. LIPIDIFy provides six imputation
-strategies via `impute_missing_values()`. Imputation must be applied
-**before normalisation** to avoid biasing per-sample scaling factors.
+strategies via `impute_missing_values()`. Imputing **after normalisation**
+ensures that imputed values are on the same scale as observed values.
 
 ## Available Methods
 
@@ -229,23 +231,20 @@ print(get_imputation_methods())
 ```
 
 ```{r imputation_apply, eval=FALSE}
-# Check missingness
-data <- load_lipidomics_data("path/to/mydata.csv")
-cat("Missing values:", sum(is.na(data$numeric_data)), "\n")
+# Check missingness in normalised data
+normalized <- normalize_lipidomics_data(data$numeric_data, methods = c("TIC", "Log2"))
+cat("Missing values:", sum(is.na(normalized)), "\n")
 
-# Half-minimum imputation (recommended default for MS lipidomics)
-imputed <- impute_missing_values(data$numeric_data, method = "half_min")
+# Half-minimum imputation on the normalised matrix
+imputed <- impute_missing_values(normalized, method = "half_min")
 
 # KNN imputation (requires Bioconductor impute package)
-# imputed <- impute_missing_values(data$numeric_data, method = "knn", k = 5)
-
-# Then normalise the imputed matrix
-normalized <- normalize_lipidomics_data(imputed, methods = c("TIC", "Log2"))
+# imputed <- impute_missing_values(normalized, method = "knn", k = 5)
 ```
 
 | Method | Best for |
 |--------|----------|
-| `half_min` | MS lipidomics (models LOD) — recommended default |
+| `half_min` | MS lipidomics (models LOD on normalised scale) -- recommended default |
 | `knn` | Data missing at random; requires `impute` Bioconductor package |
 | `zero` | Only when absence of signal truly means zero |
 | `mean` / `median` | Small proportions of missing values |
@@ -272,31 +271,6 @@ create_pca_plot_with_ellipses(pca_post$pca_data, pca_post$variance_explained,
                               ellipse_type = "confidence",
                               title = "PCA after Batch Correction")
 ```
-
-# LIPID MAPS Database Annotation
-
-`annotate_with_lipidmaps()` queries the LIPID MAPS Structure Database (LMSD)
-REST API to add curated identifiers and chemical properties to your lipid
-list. Requires an internet connection (~0.3 s per lipid).
-
-```{r lipidmaps_annotation, eval=FALSE}
-lipid_names <- colnames(data$numeric_data)
-annotation  <- annotate_with_lipidmaps(lipid_names, verbose = TRUE)
-
-# Fields returned: LipidMaps_ID, CommonName, SystematicName,
-#                  ExactMass, Formula, MainClass, SubClass
-cat("Matched:", sum(!is.na(annotation$LipidMaps_ID)), "/",
-    nrow(annotation), "\n")
-
-# Merge with automatic classification
-classification_enriched <- merge(
-  get_lipid_classification(lipid_names),
-  annotation, by = "Lipid", all.x = TRUE
-)
-export_classification(classification_enriched, "enriched_classification.csv")
-```
-
-# Normalization
 
 Multiple normalization methods are available:
 
