@@ -37,9 +37,11 @@ knitr::opts_chunk$set(
 | Step | What it does | Key function(s) |
 |------|-------------|-----------------|
 | 1 | Load data | `generate_example_data()`, `load_lipidomics_data_from_df()` |
-| 2 | Classify lipids | `classify_lipids()` |
+| 1.5 | Impute missing values | `impute_missing_values()` |
+| 2 | Classify lipids | `classify_lipids()`, `annotate_with_lipidmaps()` |
 | 3 | Visualize raw data | `visualize_raw_data_improved()` |
 | 4 | Compare and apply normalization | `apply_normalizations()`, `create_pipeline_plot()` |
+| 4.5 | Correct batch effects | `correct_batch_effects()` |
 | 5 | Quality control (PCA) | `perform_pca()`, `create_pca_plot_with_ellipses()` |
 | 6 | Differential analysis | `perform_differential_analysis()` |
 | 7 | Visualize results | `create_volcano_plot_labeled()`, `create_heatmap_robust()` |
@@ -90,6 +92,50 @@ data_obj$numeric_data[1:4, 1:3]
 
 ***
 
+## Step 1.5 - Missing Value Imputation
+
+Missing values (NA) are common in untargeted lipidomics and arise when a
+lipid's signal falls below the instrument's limit of detection (LOD).
+Imputation should be applied **before normalisation** so that per-sample
+scaling factors are not biased by the proportion of missing values.
+
+```{r impute}
+# Inspect missingness in the example data (none here — this is synthetic)
+n_miss <- sum(is.na(data_obj$numeric_data))
+cat("Missing values in example data:", n_miss, "\n")
+
+# Available methods
+cat("Imputation methods available:\n")
+print(get_imputation_methods())
+```
+
+```{r impute-apply}
+# For demonstration: introduce 5% artificial missing values
+set.seed(42)
+demo_mat <- data_obj$numeric_data
+demo_mat[sample(length(demo_mat), size = round(0.05 * length(demo_mat)))] <- NA
+cat("Missingness introduced:", sum(is.na(demo_mat)),
+    sprintf("(%.1f%%)\n", 100 * mean(is.na(demo_mat))))
+
+# Apply half-minimum imputation (most common in MS lipidomics)
+imputed_mat <- impute_missing_values(demo_mat, method = "half_min")
+cat("Missing after imputation:", sum(is.na(imputed_mat)), "\n")
+```
+
+**Choosing a method:**
+
+| Method | Best for |
+|--------|----------|
+| `half_min` | Most lipidomics data; models the LOD (recommended default) |
+| `knn` | Data missing at random (MAR); requires `impute` Bioconductor package |
+| `zero` | Only when absence of signal truly means zero |
+| `mean` / `median` | Small proportions of missing values |
+
+For the remainder of this vignette we use the complete example data without
+artificial missingness.
+
+***
+
 ## Step 2 - Lipid Classification
 
 `classify_lipids()` parses lipid names and assigns three classification levels:
@@ -111,6 +157,23 @@ print(sort(table(classification$LipidGroup), decreasing = TRUE))
 
 cat("\nFatty-acid saturation:\n")
 print(table(classification$Saturation))
+```
+
+### Optional: LIPID MAPS Database Annotation
+
+`annotate_with_lipidmaps()` queries the LIPID MAPS Structure Database (LMSD)
+REST API to enrich each lipid name with its LIPID MAPS ID, exact monoisotopic
+mass, molecular formula, and ontology classes. Requires an internet connection;
+the function waits 0.3 s between requests to respect the server rate limit.
+
+```{r lipidmaps, eval=FALSE}
+# Annotate the first 5 lipids as a demonstration (~2 s with network access)
+ann <- annotate_with_lipidmaps(lipid_names[1:5], verbose = TRUE)
+print(ann[, c("Lipid", "LipidMaps_ID", "Formula", "ExactMass", "MainClass")])
+
+# Merge with the automatic classification for a fully enriched table
+classification_enriched <- merge(classification, ann, by = "Lipid", all.x = TRUE)
+head(classification_enriched)
 ```
 
 ***
@@ -198,6 +261,47 @@ visualize_raw_data_improved(
   group_column = "Sample Group"
 )
 ```
+
+***
+
+## Step 4.5 - Batch Effect Correction
+
+When samples were processed across multiple runs, instruments, or operators,
+technical batch effects can obscure biological differences. Batch correction
+should be applied **after normalisation** and verified with PCA.
+
+Two methods are available:
+
+| Method | When to use |
+|--------|------------|
+| `"limma"` | Default; fast and reliable for balanced designs |
+| `"combat"` | Better for large or unbalanced batch effects; requires `sva` package |
+
+```{r batch-correction, eval=FALSE}
+# Simulate batch labels (real data would have this in the metadata file)
+data_obj$metadata$Batch <- rep(c("Run1", "Run2"), each = 10)
+
+# Apply limma batch correction after normalisation
+norm_corrected <- correct_batch_effects(
+  data_matrix  = norm_data,
+  metadata     = data_obj$metadata,
+  batch_column = "Batch",
+  group_column = "Sample Group",
+  method       = "limma"
+)
+
+# Verify: PCA should now show clustering by biology, not by batch
+pca_corrected <- perform_pca(norm_corrected, data_obj$metadata, "Sample Group")
+create_pca_plot_with_ellipses(
+  pca_data           = pca_corrected$pca_data,
+  variance_explained = pca_corrected$variance_explained,
+  ellipse_type       = "confidence",
+  title              = "PCA after Batch Correction"
+)
+```
+
+For the remainder of this vignette we proceed with the uncorrected
+normalised data (the example dataset has no batch structure).
 
 ***
 

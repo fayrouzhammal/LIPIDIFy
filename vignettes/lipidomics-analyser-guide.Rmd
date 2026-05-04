@@ -215,6 +215,87 @@ if (is.list(plots)) {
 }
 ```
 
+# Missing Value Imputation
+
+Missing values in lipidomics data arise when a lipid's signal falls below
+the instrument's limit of detection. LIPIDIFy provides six imputation
+strategies via `impute_missing_values()`. Imputation must be applied
+**before normalisation** to avoid biasing per-sample scaling factors.
+
+## Available Methods
+
+```{r imputation_methods}
+print(get_imputation_methods())
+```
+
+```{r imputation_apply, eval=FALSE}
+# Check missingness
+data <- load_lipidomics_data("path/to/mydata.csv")
+cat("Missing values:", sum(is.na(data$numeric_data)), "\n")
+
+# Half-minimum imputation (recommended default for MS lipidomics)
+imputed <- impute_missing_values(data$numeric_data, method = "half_min")
+
+# KNN imputation (requires Bioconductor impute package)
+# imputed <- impute_missing_values(data$numeric_data, method = "knn", k = 5)
+
+# Then normalise the imputed matrix
+normalized <- normalize_lipidomics_data(imputed, methods = c("TIC", "Log2"))
+```
+
+| Method | Best for |
+|--------|----------|
+| `half_min` | MS lipidomics (models LOD) — recommended default |
+| `knn` | Data missing at random; requires `impute` Bioconductor package |
+| `zero` | Only when absence of signal truly means zero |
+| `mean` / `median` | Small proportions of missing values |
+
+# Batch Effect Correction
+
+Technical batch effects arise from differences in sample preparation or
+instrument performance across analytical runs. `correct_batch_effects()`
+removes these effects while preserving biological signal.
+
+```{r batch_correction_apply, eval=FALSE}
+# Assumes your metadata has a "Batch" column
+corrected <- correct_batch_effects(
+  data_matrix  = normalized,
+  metadata     = data$metadata,
+  batch_column = "Batch",
+  group_column = "Sample Group",
+  method       = "limma"           # or "combat" (requires sva package)
+)
+
+# Verify with PCA: samples should cluster by biology, not batch
+pca_post <- perform_pca(corrected, data$metadata, "Sample Group")
+create_pca_plot_with_ellipses(pca_post$pca_data, pca_post$variance_explained,
+                              ellipse_type = "confidence",
+                              title = "PCA after Batch Correction")
+```
+
+# LIPID MAPS Database Annotation
+
+`annotate_with_lipidmaps()` queries the LIPID MAPS Structure Database (LMSD)
+REST API to add curated identifiers and chemical properties to your lipid
+list. Requires an internet connection (~0.3 s per lipid).
+
+```{r lipidmaps_annotation, eval=FALSE}
+lipid_names <- colnames(data$numeric_data)
+annotation  <- annotate_with_lipidmaps(lipid_names, verbose = TRUE)
+
+# Fields returned: LipidMaps_ID, CommonName, SystematicName,
+#                  ExactMass, Formula, MainClass, SubClass
+cat("Matched:", sum(!is.na(annotation$LipidMaps_ID)), "/",
+    nrow(annotation), "\n")
+
+# Merge with automatic classification
+classification_enriched <- merge(
+  get_lipid_classification(lipid_names),
+  annotation, by = "Lipid", all.x = TRUE
+)
+export_classification(classification_enriched, "enriched_classification.csv")
+```
+
 # Normalization
 
 Multiple normalization methods are available:

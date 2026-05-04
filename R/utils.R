@@ -631,3 +631,385 @@ load_custom_enrichment_sets <- function(file_path) {
   }
   split(sets_df$Lipid, sets_df$Set_Name)
 }
+
+# ---------------------------------------------------------------------------
+# Missing value imputation
+# ---------------------------------------------------------------------------
+
+#' Return Available Imputation Method Names
+#'
+#' @return Character vector of imputation method names supported by
+#'   \code{impute_missing_values}.
+#' @export
+#' @examples
+#' get_imputation_methods()
+get_imputation_methods <- function() {
+  c("half_min", "min", "zero", "mean", "median", "knn")
+}
+
+#' Return Human-Readable Descriptions of Imputation Methods
+#'
+#' @return Named character vector (name = method key, value = description).
+#' @export
+#' @examples
+#' descs <- get_imputation_descriptions()
+#' cat(descs["half_min"])
+get_imputation_descriptions <- function() {
+  c(
+    half_min = paste(
+      "Half-minimum: replaces each NA with half the column minimum.",
+      "Models the limit of detection (LOD) and is the most widely used",
+      "approach in untargeted MS lipidomics."
+    ),
+    min = paste(
+      "Minimum: replaces each NA with the column minimum observed value.",
+      "Slightly more conservative than half-minimum."
+    ),
+    zero = paste(
+      "Zero: replaces NA with 0.",
+      "Use only when absence of signal genuinely means zero abundance."
+    ),
+    mean = paste(
+      "Mean: replaces each NA with the column mean of observed values.",
+      "Simple but can introduce bias when data are not missing at random (MNAR)."
+    ),
+    median = paste(
+      "Median: replaces each NA with the column median of observed values.",
+      "More robust than mean to extreme values."
+    ),
+    knn = paste(
+      "K-Nearest Neighbours (KNN): imputes each missing value using the",
+      "k most similar samples (Euclidean distance in feature space).",
+      "Requires the impute Bioconductor package.",
+      "Recommended when data are missing at random (MAR)."
+    )
+  )
+}
+
+#' Impute Missing Values in a Lipidomics Data Matrix
+#'
+#' Replaces \code{NA} values using the chosen strategy. Imputation should be
+#' applied \strong{before} normalisation so that missing values do not bias
+#' per-sample scaling factors.
+#'
+#' @param data_matrix Numeric matrix with samples as rows and lipids as
+#'   columns.
+#' @param method Imputation method. One of \code{"half_min"} (default),
+#'   \code{"min"}, \code{"zero"}, \code{"mean"}, \code{"median"},
+#'   \code{"knn"}. See \code{\link{get_imputation_descriptions}} for details.
+#' @param k Integer. Number of nearest neighbours for \code{"knn"}
+#'   (ignored for other methods). Default \code{5}.
+#' @param seed Integer. Random seed for reproducibility when \code{method =
+#'   "knn"}. Default \code{42}.
+#' @return Imputed numeric matrix of the same dimensions as
+#'   \code{data_matrix}.
+#' @export
+#' @examples
+#' m <- matrix(c(1000, NA, 3000, NA, 500, 1500), nrow = 2)
+#' impute_missing_values(m, method = "half_min")
+impute_missing_values <- function(data_matrix,
+                                   method = "half_min",
+                                   k      = 5L,
+                                   seed   = 42L) {
+  method <- match.arg(method, get_imputation_methods())
+  if (!is.matrix(data_matrix)) data_matrix <- as.matrix(data_matrix)
+  storage.mode(data_matrix) <- "numeric"
+
+  n_missing <- sum(is.na(data_matrix))
+  if (n_missing == 0L) {
+    message("No missing values detected. Returning data unchanged.")
+    return(data_matrix)
+  }
+  message(sprintf(
+    "Imputing %d missing value(s) (%.1f%% of matrix) using method: %s",
+    n_missing,
+    100 * n_missing / length(data_matrix),
+    method
+  ))
+
+  result <- switch(method,
+    half_min = {
+      apply(data_matrix, 2L, function(col) {
+        col[is.na(col)] <- min(col, na.rm = TRUE) / 2
+        col
+      })
+    },
+    min = {
+      apply(data_matrix, 2L, function(col) {
+        col[is.na(col)] <- min(col, na.rm = TRUE)
+        col
+      })
+    },
+    zero = {
+      data_matrix[is.na(data_matrix)] <- 0
+      data_matrix
+    },
+    mean = {
+      apply(data_matrix, 2L, function(col) {
+        col[is.na(col)] <- mean(col, na.rm = TRUE)
+        col
+      })
+    },
+    median = {
+      apply(data_matrix, 2L, function(col) {
+        col[is.na(col)] <- stats::median(col, na.rm = TRUE)
+        col
+      })
+    },
+    knn = {
+      if (!requireNamespace("impute", quietly = TRUE)) {
+        warning(
+          "Package 'impute' is required for KNN imputation. ",
+          "Install with: BiocManager::install('impute'). ",
+          "Falling back to half-minimum imputation.",
+          call. = FALSE
+        )
+        return(impute_missing_values(data_matrix, method = "half_min"))
+      }
+      set.seed(seed)
+      # impute::impute.knn expects features as rows, samples as columns
+      imp <- impute::impute.knn(t(data_matrix), k = k)
+      t(imp$data)
+    }
+  )
+
+  rownames(result) <- rownames(data_matrix)
+  colnames(result) <- colnames(data_matrix)
+  storage.mode(result) <- "numeric"
+  result
+}
+
+
+# ---------------------------------------------------------------------------
+# Batch effect correction
+# ---------------------------------------------------------------------------
+
+#' Correct Batch Effects from a Normalised Lipidomics Matrix
+#'
+#' Removes known technical batch effects while preserving biological signal.
+#' Batch correction should be applied \strong{after} normalisation.
+#'
+#' Two methods are supported:
+#' \describe{
+#'   \item{\code{"limma"}}{Uses \code{\link[limma]{removeBatchEffect}}.
+#'     Requires only the limma package (already a dependency). Suitable for
+#'     most experimental designs.}
+#'   \item{\code{"combat"}}{Uses \code{sva::ComBat} with parametric
+#'     empirical Bayes adjustment. Requires the \pkg{sva} Bioconductor
+#'     package (\code{BiocManager::install("sva")}). Generally more robust
+#'     when batch effects are large.}
+#' }
+#'
+#' @param data_matrix Numeric matrix with samples as rows and lipids as
+#'   columns (typically the output of \code{\link{apply_normalizations}}).
+#' @param metadata Data frame of sample metadata aligned with
+#'   \code{data_matrix} (same row order).
+#' @param batch_column Character. Name of the column in \code{metadata}
+#'   containing batch labels.
+#' @param group_column Character. Name of the biological group column to
+#'   protect from removal (default \code{"Sample Group"}). Pass \code{NULL}
+#'   to skip group protection.
+#' @param method One of \code{"limma"} (default) or \code{"combat"}.
+#' @return Batch-corrected numeric matrix of the same dimensions as
+#'   \code{data_matrix}.
+#' @export
+#' @examples
+#' d    <- load_lipidomics_data_from_df(generate_example_data())
+#' norm <- apply_normalizations(d$numeric_data, c("TIC", "Log2"))
+#' d$metadata$Batch <- rep(c("Batch1", "Batch2"), each = 10)
+#' corrected <- correct_batch_effects(norm, d$metadata,
+#'                                    batch_column = "Batch")
+#' dim(corrected)
+correct_batch_effects <- function(data_matrix,
+                                   metadata,
+                                   batch_column,
+                                   group_column = "Sample Group",
+                                   method       = "limma") {
+  method <- match.arg(method, c("limma", "combat"))
+  if (!is.matrix(data_matrix)) data_matrix <- as.matrix(data_matrix)
+
+  if (!batch_column %in% colnames(metadata)) {
+    stop(
+      "batch_column '", batch_column, "' not found in metadata. ",
+      "Available columns: ", paste(colnames(metadata), collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  batch <- as.factor(as.character(metadata[[batch_column]]))
+
+  # Build a design matrix to protect biological signal
+  design_protect <- NULL
+  if (!is.null(group_column) && group_column %in% colnames(metadata)) {
+    groups         <- factor(make.names(as.character(metadata[[group_column]])))
+    design_protect <- stats::model.matrix(~ groups)
+  }
+
+  # limma and ComBat expect features × samples
+  data_t <- t(data_matrix)
+
+  corrected_t <- switch(method,
+    limma = {
+      limma::removeBatchEffect(data_t,
+        batch  = batch,
+        design = design_protect
+      )
+    },
+    combat = {
+      if (!requireNamespace("sva", quietly = TRUE)) {
+        warning(
+          "Package 'sva' is required for ComBat. ",
+          "Install with: BiocManager::install('sva'). ",
+          "Falling back to limma::removeBatchEffect.",
+          call. = FALSE
+        )
+        return(correct_batch_effects(data_matrix, metadata, batch_column,
+                                      group_column, method = "limma"))
+      }
+      sva::ComBat(
+        dat        = data_t,
+        batch      = batch,
+        mod        = design_protect,
+        par.prior  = TRUE,
+        prior.plots = FALSE
+      )
+    }
+  )
+
+  corrected <- t(corrected_t)
+  rownames(corrected) <- rownames(data_matrix)
+  colnames(corrected) <- colnames(data_matrix)
+  corrected
+}
+
+
+# ---------------------------------------------------------------------------
+# LIPID MAPS REST API annotation
+# ---------------------------------------------------------------------------
+
+#' Annotate Lipid Names Using the LIPID MAPS REST API
+#'
+#' Queries the LIPID MAPS Structure Database (LMSD) for each supplied lipid
+#' name and returns a data frame enriched with LIPID MAPS identifiers,
+#' chemical properties, and ontology classes.
+#'
+#' @param lipid_names Character vector of lipid names to query.
+#' @param timeout Numeric. HTTP timeout in seconds per query (default
+#'   \code{10}). Increase for slow connections or large queries.
+#' @param verbose Logical. If \code{TRUE}, prints per-lipid progress
+#'   messages (default \code{FALSE}).
+#' @return A data frame with one row per input lipid and columns:
+#'   \describe{
+#'     \item{\code{Lipid}}{Input lipid name.}
+#'     \item{\code{LipidMaps_ID}}{LIPID MAPS unique identifier (LMID).}
+#'     \item{\code{CommonName}}{Common/trivial name from LMSD.}
+#'     \item{\code{SystematicName}}{IUPAC systematic name.}
+#'     \item{\code{ExactMass}}{Exact monoisotopic mass (Da).}
+#'     \item{\code{Formula}}{Molecular formula.}
+#'     \item{\code{MainClass}}{LIPID MAPS main class.}
+#'     \item{\code{SubClass}}{LIPID MAPS sub-class.}
+#'   }
+#'   Lipids with no LMSD match have \code{NA} in all database columns.
+#' @details
+#'   Requires an active internet connection. The function waits 0.3 s
+#'   between requests to avoid overloading the server. For datasets with
+#'   more than 200 lipids, consider running the function in batches across
+#'   sessions.
+#'
+#'   LIPID MAPS REST API documentation:
+#'   \url{https://www.lipidmaps.org/resources/rest}
+#' @export
+#' @examples
+#' \donttest{
+#'   ann <- annotate_with_lipidmaps(c("PC(16:0/18:1)", "TG(16:0/18:1/20:4)"))
+#'   print(ann)
+#' }
+annotate_with_lipidmaps <- function(lipid_names,
+                                     timeout = 10,
+                                     verbose = FALSE) {
+  if (!requireNamespace("jsonlite", quietly = TRUE)) {
+    stop(
+      "Package 'jsonlite' is required for LIPID MAPS annotation. ",
+      "Install with: install.packages('jsonlite')",
+      call. = FALSE
+    )
+  }
+
+  empty_row <- function(name) {
+    data.frame(
+      Lipid          = name,
+      LipidMaps_ID   = NA_character_,
+      CommonName     = NA_character_,
+      SystematicName = NA_character_,
+      ExactMass      = NA_real_,
+      Formula        = NA_character_,
+      MainClass      = NA_character_,
+      SubClass       = NA_character_,
+      stringsAsFactors = FALSE
+    )
+  }
+
+  query_one <- function(name) {
+    encoded <- utils::URLencode(name, reserved = TRUE)
+    url     <- paste0(
+      "https://www.lipidmaps.org/rest/compound/name/",
+      encoded, "/all/json"
+    )
+
+    tryCatch({
+      con <- url(url, open = "")
+      on.exit(try(close(con), silent = TRUE))
+      raw <- jsonlite::fromJSON(url, simplifyDataFrame = TRUE)
+
+      if (is.null(raw) || length(raw) == 0L ||
+          (is.data.frame(raw) && nrow(raw) == 0L)) {
+        return(empty_row(name))
+      }
+
+      r <- if (is.data.frame(raw)) raw[1L, ] else as.data.frame(as.list(raw))
+
+      data.frame(
+        Lipid          = name,
+        LipidMaps_ID   = .lm_field(r, c("lm_id",       "LM_ID")),
+        CommonName     = .lm_field(r, c("common_name",  "NAME")),
+        SystematicName = .lm_field(r, c("sys_name",     "SYSTEMATIC_NAME")),
+        ExactMass      = suppressWarnings(
+          as.numeric(.lm_field(r, c("exact_mass", "EXACT_MASS")))
+        ),
+        Formula        = .lm_field(r, c("formula",      "FORMULA")),
+        MainClass      = .lm_field(r, c("main_class",   "MAIN_CLASS")),
+        SubClass       = .lm_field(r, c("sub_class",    "SUB_CLASS")),
+        stringsAsFactors = FALSE
+      )
+    },
+    error = function(e) {
+      if (verbose) message("  Could not annotate '", name, "': ", e$message)
+      empty_row(name)
+    })
+  }
+
+  n       <- length(lipid_names)
+  results <- vector("list", n)
+
+  for (i in seq_len(n)) {
+    if (verbose) message(sprintf("[%d/%d] Querying: %s", i, n, lipid_names[i]))
+    results[[i]] <- query_one(lipid_names[i])
+    if (i < n) Sys.sleep(0.3)   # polite rate limiting
+  }
+
+  out <- do.call(rbind, results)
+  rownames(out) <- NULL
+  out
+}
+
+# Internal: safely extract a field from a one-row data frame,
+# trying candidate column names in order.
+.lm_field <- function(row, candidates) {
+  for (cn in candidates) {
+    v <- row[[cn]]
+    if (!is.null(v) && length(v) == 1L && !is.na(v) && nchar(as.character(v)) > 0L) {
+      return(as.character(v))
+    }
+  }
+  NA_character_
+}
