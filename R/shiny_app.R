@@ -652,10 +652,18 @@ Methods are applied left-to-right in the order you select them.
               ),
               shiny::selectInput("plot_type", "Plot Type:",
                 choices = c(
-                  "Boxplot" = "boxplot",
-                  "Violin" = "violin",
-                  "Density" = "density",
-                  "Histogram" = "histogram"
+                  "Boxplot"   = "boxplot",
+                  "Violin"    = "violin",
+                  "Density"   = "density",
+                  "Histogram" = "histogram",
+                  "Heatmap"   = "heatmap"
+                )
+              ),
+              shiny::conditionalPanel(
+                condition = "input.plot_type == 'heatmap'",
+                shiny::numericInput("raw_heatmap_top_n",
+                  "Top N Variable Lipids:",
+                  value = 50, min = 10, max = 200
                 )
               ),
               shiny::conditionalPanel(
@@ -689,7 +697,7 @@ Methods are applied left-to-right in the order you select them.
             shinydashboard::box(
               title = "Raw Data Visualization", status = "info",
               solidHeader = TRUE, width = 8,
-              plotly::plotlyOutput("raw_plot", height = "500px")
+              shiny::uiOutput("raw_plot_ui")
             )
           )
         ),
@@ -872,10 +880,18 @@ Methods are applied left-to-right in the order you select them.
               shiny::selectInput("norm_plot_type", "Plot Type:",
                 choices = c(
                   "Boxplot" = "boxplot",
-                  "Violin" = "violin",
+                  "Violin"  = "violin",
                   "Density" = "density",
-                  "PCA" = "pca",
-                  "PLS-DA" = "plsda"
+                  "Heatmap" = "heatmap",
+                  "PCA"     = "pca",
+                  "PLS-DA"  = "plsda"
+                )
+              ),
+              shiny::conditionalPanel(
+                condition = "input.norm_plot_type == 'heatmap'",
+                shiny::numericInput("norm_heatmap_top_n",
+                  "Top N Variable Lipids:",
+                  value = 50, min = 10, max = 200
                 )
               ),
               shiny::hr(),
@@ -926,7 +942,7 @@ Methods are applied left-to-right in the order you select them.
             shinydashboard::box(
               title = "Normalized Data Plot", status = "info",
               solidHeader = TRUE, width = 8,
-              plotly::plotlyOutput("norm_plot", height = "500px")
+              shiny::uiOutput("norm_plot_ui")
             )
           )
         ),
@@ -1018,6 +1034,23 @@ Methods are applied left-to-right in the order you select them.
                 icon = shiny::icon("info-circle")
               ),
               shiny::uiOutput("contrast_selection_ui"),
+              shiny::hr(),
+              shiny::h4("Custom Contrasts"),
+              shiny::helpText(
+                "Enter one contrast per line using limma notation. ",
+                "Use this for complex comparisons such as collapsing groups:"
+              ),
+              shiny::tags$pre(
+                style = "font-size:11px; background:#f5f5f5; padding:6px; border-radius:4px;",
+                "(GroupA + GroupB)/2 - (GroupC + GroupD)/2"
+              ),
+              shiny::textAreaInput(
+                "custom_contrasts_text",
+                label    = NULL,
+                value    = "",
+                rows     = 3,
+                placeholder = "e.g.\n(ND_Vehicle + ND_DabTram)/2 - (HFD_Vehicle + HFD_DabTram)/2"
+              ),
               shiny::hr(),
               shiny::actionButton("run_diff_analysis", "Run Analysis",
                 class = "btn-primary"
@@ -1638,8 +1671,7 @@ Methods are applied left-to-right in the order you select them.
       shiny::req(values$raw_data)
       tryCatch(
         {
-          top_n <- if (input$view_mode == "lipid") input$top_n_lipids else NULL
-          # Apply group filter if selected groups differ from all groups
+          # Apply group filter
           raw_data_filtered <- values$raw_data
           if (!is.null(input$raw_filter_groups) && length(input$raw_filter_groups) > 0 &&
             "Sample Group" %in% names(values$raw_data$metadata)) {
@@ -1650,16 +1682,38 @@ Methods are applied left-to-right in the order you select them.
             )
           }
           metadata <- if (isTRUE(input$raw_color_by_group)) raw_data_filtered$metadata else NULL
-          plot <- visualize_raw_data_improved(
-            raw_data_filtered, input$plot_type, input$view_mode,
-            top_n,
-            metadata = metadata
-          )
-          values$current_raw_plot <- plot
-          values$current_plot <- plot
-          add_to_history("Raw Data", paste("Raw", input$plot_type, input$view_mode), plot)
 
-          output$raw_plot <- plotly::renderPlotly(plotly::ggplotly(plot))
+          if (input$plot_type == "heatmap") {
+            hm <- create_heatmap_robust(
+              data_matrix  = t(raw_data_filtered$numeric_data),
+              metadata     = raw_data_filtered$metadata,
+              group_column = "Sample Group",
+              top_n        = input$raw_heatmap_top_n,
+              title        = "Raw Data Heatmap - Top Variable Lipids"
+            )
+            values$current_raw_plot <- hm
+            values$current_plot     <- hm
+            add_to_history("Raw Data", "Raw heatmap", hm)
+            output$raw_plot_ui <- shiny::renderUI(
+              shiny::plotOutput("raw_heatmap_plot", height = "600px")
+            )
+            output$raw_heatmap_plot <- shiny::renderPlot({
+              if (inherits(hm, "pheatmap")) grid::grid.draw(hm$gtable) else print(hm)
+            })
+          } else {
+            top_n <- if (input$view_mode == "lipid") input$top_n_lipids else NULL
+            plot  <- visualize_raw_data_improved(
+              raw_data_filtered, input$plot_type, input$view_mode,
+              top_n, metadata = metadata
+            )
+            values$current_raw_plot <- plot
+            values$current_plot     <- plot
+            add_to_history("Raw Data", paste("Raw", input$plot_type, input$view_mode), plot)
+            output$raw_plot_ui <- shiny::renderUI(
+              plotly::plotlyOutput("raw_plot", height = "500px")
+            )
+            output$raw_plot <- plotly::renderPlotly(plotly::ggplotly(plot))
+          }
         },
         error = function(e) show_error(e, "Raw data visualization")
       )
@@ -1824,12 +1878,35 @@ Methods are applied left-to-right in the order you select them.
 
           if (input$norm_plot_type %in% c("boxplot", "violin", "density")) {
             dl <- list(numeric_data = filt_dat, metadata = filt_md)
-            # Color by group only if option is checked
             md_col <- if (isTRUE(input$norm_color_by_group_viz)) filt_md else NULL
             plot <- visualize_raw_data_improved(
               dl, input$norm_plot_type, "sample",
               metadata = md_col, group_column = group_col
             )
+            values$current_norm_plot <- plot
+            add_to_history("Normalized Viz", paste("Norm", input$norm_plot_type), plot)
+            output$norm_plot_ui <- shiny::renderUI(
+              plotly::plotlyOutput("norm_plot", height = "500px")
+            )
+            output$norm_plot <- plotly::renderPlotly(plotly::ggplotly(plot))
+
+          } else if (input$norm_plot_type == "heatmap") {
+            hm <- create_heatmap_robust(
+              data_matrix  = t(filt_dat),
+              metadata     = filt_md,
+              group_column = group_col,
+              top_n        = input$norm_heatmap_top_n,
+              title        = "Normalised Data Heatmap - Top Variable Lipids"
+            )
+            values$current_norm_plot <- hm
+            add_to_history("Normalized Viz", "Norm heatmap", hm)
+            output$norm_plot_ui <- shiny::renderUI(
+              shiny::plotOutput("norm_heatmap_plot", height = "600px")
+            )
+            output$norm_heatmap_plot <- shiny::renderPlot({
+              if (inherits(hm, "pheatmap")) grid::grid.draw(hm$gtable) else print(hm)
+            })
+
           } else if (input$norm_plot_type == "pca") {
             shiny::req(group_col)
             pca_res <- perform_pca(filt_dat, filt_md, group_col)
@@ -1839,6 +1916,13 @@ Methods are applied left-to-right in the order you select them.
               ellipse_type = input$ellipse_type,
               show_sample_labels = isTRUE(input$show_sample_labels)
             )
+            values$current_norm_plot <- plot
+            add_to_history("Normalized Viz", "Norm PCA", plot)
+            output$norm_plot_ui <- shiny::renderUI(
+              plotly::plotlyOutput("norm_plot", height = "500px")
+            )
+            output$norm_plot <- plotly::renderPlotly(plotly::ggplotly(plot))
+
           } else if (input$norm_plot_type == "plsda") {
             shiny::req(group_col)
             plsda_res <- perform_plsda(as.matrix(filt_dat), filt_md, group_col)
@@ -1847,15 +1931,13 @@ Methods are applied left-to-right in the order you select them.
               ellipse_type = input$ellipse_type,
               show_sample_labels = isTRUE(input$show_sample_labels)
             )
+            values$current_norm_plot <- plot
+            add_to_history("Normalized Viz", "Norm PLS-DA", plot)
+            output$norm_plot_ui <- shiny::renderUI(
+              plotly::plotlyOutput("norm_plot", height = "500px")
+            )
+            output$norm_plot <- plotly::renderPlotly(plotly::ggplotly(plot))
           }
-
-          values$current_norm_plot <- plot
-          add_to_history(
-            "Normalized Viz",
-            paste("Norm", input$norm_plot_type), plot
-          )
-
-          output$norm_plot <- plotly::renderPlotly(plotly::ggplotly(plot))
         },
         error = function(e) show_error(e, "Creating normalized data plot")
       )
@@ -2013,19 +2095,56 @@ Methods are applied left-to-right in the order you select them.
         title = "Contrast Selection", easyClose = TRUE,
         footer = shiny::modalButton("Close"),
         shiny::HTML("
+          <h4>Automatic pairwise contrasts</h4>
           <p>Each contrast compares two groups: <code>GroupA - GroupB</code>
-          tests whether GroupA differs from GroupB.</p>
-          <p>Select only the contrasts relevant to your research question to
-          minimise the multiple-testing burden.</p>
-          <p>All pairwise contrasts are generated automatically from the
-          groups present in the selected metadata column.</p>
+          tests whether GroupA differs from GroupB. Positive logFC means
+          higher in GroupA. All pairwise contrasts are generated automatically.</p>
+          <h4>Custom contrasts</h4>
+          <p>Use the text box to define complex comparisons in standard
+          limma notation. Group names must exactly match those in the
+          selected group column (use <code>make.names()</code> rules:
+          spaces become dots). One contrast per line.</p>
+          <p><strong>Examples for a 2x2 design (Diet x Treatment):</strong></p>
+          <pre style='font-size:12px'>
+# Diet effect (collapsed across treatment):
+(ND_Vehicle + ND_DabTram)/2 - (HFD_Vehicle + HFD_DabTram)/2
+
+# Treatment effect (collapsed across diet):
+(ND_DabTram + HFD_DabTram)/2 - (ND_Vehicle + HFD_Vehicle)/2
+
+# Interaction (does treatment effect differ by diet?):
+(HFD_DabTram - HFD_Vehicle) - (ND_DabTram - ND_Vehicle)</pre>
+          <p><em>Tip:</em> if group names contain spaces or special
+          characters, they are internally sanitised with
+          <code>make.names()</code> — use the sanitised form in custom
+          contrasts (e.g. <code>A375.ND.DabTram</code> for
+          <code>A375 ND DabTram</code>).</p>
         ")
       ))
     })
 
     # ---- Run differential analysis ---------------------------------------
     shiny::observeEvent(input$run_diff_analysis, {
-      shiny::req(values$normalized_data, input$selected_contrasts)
+      # At least one of: checkbox contrasts or custom text contrasts must be present
+      checkbox_contrasts <- input$selected_contrasts
+      custom_raw <- trimws(input$custom_contrasts_text)
+      custom_contrasts <- if (nzchar(custom_raw)) {
+        lines <- trimws(strsplit(custom_raw, "\n")[[1]])
+        lines[nzchar(lines) & !startsWith(lines, "#")]
+      } else {
+        character(0)
+      }
+      all_contrasts <- unique(c(checkbox_contrasts, custom_contrasts))
+
+      if (length(all_contrasts) == 0) {
+        shiny::showNotification(
+          "Select at least one contrast or enter a custom contrast.",
+          type = "warning", duration = 6
+        )
+        return()
+      }
+
+      shiny::req(values$normalized_data)
       tryCatch(
         {
           md <- values$normalized_data$metadata
@@ -2034,7 +2153,7 @@ Methods are applied left-to-right in the order you select them.
             data_matrix    = values$normalized_data$numeric_data,
             metadata       = md,
             group_column   = input$group_col_diff,
-            contrasts_list = input$selected_contrasts,
+            contrasts_list = all_contrasts,
             method         = input$diff_method
           )
           values$diff_results <- results
@@ -2172,25 +2291,34 @@ Methods are applied left-to-right in the order you select them.
                   ggplot2::ggplot() +
                     ggplot2::annotate("text",
                       x = 0.5, y = 0.5,
-                      label = "No features available in data",
-                      size = 6
+                      label = paste0(
+                        "No significant lipid names matched the data matrix.\n",
+                        "Check that differential analysis was run on the\n",
+                        "same normalised data currently loaded."
+                      ),
+                      size = 5
                     ) +
                     ggplot2::theme_void()
                 )
               } else {
-                parts <- trimws(strsplit(input$contrast_select, " - ")[[1]])
-                if (length(parts) == 2) {
-                  mask <- values$normalized_data$metadata[[input$group_col_diff]] %in%
-                    parts
-                  filt_dat <- values$normalized_data$numeric_data[mask,
-                    avail,
-                    drop = FALSE
-                  ]
-                  filt_md <- values$normalized_data$metadata[mask, , drop = FALSE]
+                # Safely filter to the contrast groups.
+                # Only attempt simple "A - B" contrasts; for complex expressions
+                # (custom contrasts with parentheses/arithmetic) show all samples.
+                group_vals <- as.character(
+                  values$normalized_data$metadata[[input$group_col_diff]]
+                )
+                is_simple <- !grepl("[()*/+]", input$contrast_select)
+                mask <- if (is_simple) {
+                  parts <- trimws(strsplit(input$contrast_select, " - ")[[1]])
+                  group_vals %in% parts
                 } else {
-                  filt_dat <- values$normalized_data$numeric_data[, avail, drop = FALSE]
-                  filt_md <- values$normalized_data$metadata
+                  rep(TRUE, length(group_vals))
                 }
+                # Require at least 2 samples after filtering; otherwise show all
+                if (sum(mask) < 2L) mask <- rep(TRUE, length(group_vals))
+
+                filt_dat <- values$normalized_data$numeric_data[mask, avail, drop = FALSE]
+                filt_md  <- values$normalized_data$metadata[mask, , drop = FALSE]
 
                 hm <- create_heatmap_robust(
                   t(filt_dat), filt_md, input$group_col_diff,
