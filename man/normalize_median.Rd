@@ -16,6 +16,6 @@ Median-normalized matrix.
 Scales each sample so its median equals the global median across all samples.
 }
 \examples{
-m <- matrix(c(1000,2000,3000,4000,500,1500), nrow = 2)
+m <- matrix(c(1000, 2000, 3000, 4000, 500, 1500), nrow = 2)
 normalize_median(m)
 }

@@ -242,7 +242,7 @@ pipeline2 <- normalize_lipidomics_data(example_data[, 5:ncol(example_data)],
 - **TIC**: Total Ion Current
 - **PQN**: Probabilistic Quotient Normalization
 - **Quantile**: Quantile normalization
-- **VSN**: Variance Stabilizing Normalization
+- **Log2Median**: Log2 transformation followed by median centering
 - **Median/Mean**: Centering methods
 - **Log2/Log10**: Log transformations
 - **Sqrt**: Square root transformation
@@ -368,18 +368,13 @@ print(volcano)
 ## Heatmaps
 
 ```{r heatmap, eval=FALSE}
-# Create heatmap of significant lipids
-sig_lipids <- rownames(diff_results_limma$results[[1]])[
-  diff_results_limma$results[[1]]$adj.P.Val < 0.05
-]
-
+# create_heatmap_robust expects features as rows, samples as columns
 heatmap <- create_heatmap_robust(
-  data = normalized[sig_lipids, ],
-  metadata = metadata,
+  data_matrix  = t(normalized[, sig_lipids, drop = FALSE]),
+  metadata     = metadata,
   group_column = "Sample Group",
-  scale_data = TRUE,
-  cluster_rows = TRUE,
-  cluster_cols = TRUE
+  top_n        = length(sig_lipids),
+  title        = "Significant lipids"
 )
 ```
 

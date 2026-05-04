@@ -282,7 +282,7 @@ test_saturation_classification <- function(test_lipids = NULL) {
 #' get_normalization_methods()
 get_normalization_methods <- function() {
   c(
-    "TIC", "PQN", "Quantile", "VSN", "Median", "Mean",
+    "TIC", "PQN", "Quantile", "Log2Median", "Median", "Mean",
     "Log2", "Log10", "Sqrt", "None"
   )
 }
@@ -315,10 +315,13 @@ get_normalization_descriptions <- function() {
       "After this step, per-sample boxplots will look nearly identical",
       "-- this is expected and correct behaviour, not a bug."
     ),
-    VSN = paste(
-      "Variance Stabilizing Normalization (VSN, simplified) log2-transforms",
-      "the data and median-centres each sample. Useful when variance scales",
-      "with the mean intensity."
+    Log2Median = paste(
+      "Log2 Median Centering: log2-transforms the data (log2(x + 1)),",
+      "then subtracts each sample's median deviation from the global median,",
+      "effectively centering samples on a common baseline.",
+      "Useful when variance scales with the mean intensity.",
+      "Note: this is a simplified variance-stabilising step, not the full",
+      "maximum-likelihood VSN procedure (Huber et al. 2002)."
     ),
     Median = paste(
       "Median normalization scales each sample so that its median equals the",
@@ -355,11 +358,11 @@ apply_normalizations <- function(data, methods) {
   normalized <- data
   for (method in methods) {
     normalized <- switch(method,
-      TIC      = normalize_tic(normalized),
-      PQN      = normalize_pqn(normalized),
-      Quantile = normalize_quantile(normalized),
-      VSN      = normalize_vsn(normalized),
-      Median   = normalize_median(normalized),
+      TIC        = normalize_tic(normalized),
+      PQN        = normalize_pqn(normalized),
+      Quantile   = normalize_quantile(normalized),
+      Log2Median = normalize_log2median(normalized),
+      Median     = normalize_median(normalized),
       Mean     = normalize_mean(normalized),
       Log2     = log2(normalized + 1),
       Log10    = log10(normalized + 1),
@@ -448,23 +451,45 @@ normalize_quantile <- function(data) {
   t(normalized_t)
 }
 
-#' VSN Normalization (Simplified)
+#' Log2 Median Centering Normalization
 #'
-#' Log2-transforms the data, then median-centres each sample relative to the
-#' global median. This is a simplified approximation of full VSN.
+#' Log2-transforms the data (log2(x + 1)), then median-centres each sample
+#' relative to the global median. This is a simplified variance-stabilising
+#' step suitable for mass-spectrometry lipidomics data.
+#'
+#' @details
+#' This method is \strong{not} equivalent to the full VSN procedure of
+#' Huber et al. (2002), which uses maximum-likelihood estimation. If true
+#' VSN is required, use the \pkg{vsn} Bioconductor package directly.
 #'
 #' @param data Numeric matrix (samples as rows, lipids as columns).
-#' @return VSN-normalized matrix.
+#' @return Log2-median-centred numeric matrix.
 #' @export
 #' @examples
 #' m <- matrix(c(1000, 2000, 3000, 4000, 500, 1500), nrow = 2)
-#' normalize_vsn(m)
-normalize_vsn <- function(data) {
+#' normalize_log2median(m)
+normalize_log2median <- function(data) {
   log_data <- log2(data + 1)
   medians <- apply(log_data, 1, stats::median, na.rm = TRUE)
   global_median <- stats::median(medians, na.rm = TRUE)
   normalized <- sweep(log_data, 1, medians - global_median, "-")
   2^normalized - 1
+}
+
+#' @rdname normalize_log2median
+#' @export
+#' @examples
+#' m <- matrix(c(1000, 2000, 3000, 4000, 500, 1500), nrow = 2)
+#' normalize_vsn(m)  # deprecated alias
+normalize_vsn <- function(data) {
+  .Deprecated("normalize_log2median",
+    msg = paste0(
+      "'normalize_vsn' has been renamed to 'normalize_log2median' to better ",
+      "reflect its implementation (log2 + median centering). ",
+      "Please update your code."
+    )
+  )
+  normalize_log2median(data)
 }
 
 #' Median Normalization

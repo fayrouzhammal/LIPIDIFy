@@ -125,6 +125,18 @@ perform_differential_analysis_limma <- function(data_matrix, metadata, group_col
 #' @param contrasts_list List of contrasts to perform
 #' @return List containing EdgeR results for each contrast
 perform_differential_analysis_edger <- function(data_matrix, metadata, group_column = "Sample Group", contrasts_list = NULL) {
+  # Statistical note: edgeR's negative-binomial model was developed for integer
+  # count data (RNA-seq). Applying it to continuous mass-spectrometry lipidomics
+  # intensities is an approximation. limma is the recommended method for
+  # MS-based lipidomics. edgeR is provided here as an exploratory alternative;
+  # results should be interpreted with caution and validated against limma.
+  warning(
+    "edgeR is designed for integer count data (e.g., RNA-seq). ",
+    "Applying it to continuous lipidomics intensities is an approximation. ",
+    "limma is the recommended method for MS-based lipidomics.",
+    call. = FALSE
+  )
+
   # Convert to matrix if needed
   if (!is.matrix(data_matrix)) {
     data_matrix <- as.matrix(data_matrix)
@@ -135,10 +147,9 @@ perform_differential_analysis_edger <- function(data_matrix, metadata, group_col
     data_matrix <- t(data_matrix)
   }
 
-  # Convert to counts-like data (EdgeR expects integer counts, but can work with continuous data)
-  # For lipidomics, we'll round the normalized data
-  data_matrix <- round(data_matrix)
-  data_matrix[data_matrix < 0] <- 0 # Ensure no negative values
+  # Shift any negative values to zero (can arise after log-scale normalisation)
+  # without rounding to integers, preserving the continuous nature of the data.
+  data_matrix[data_matrix < 0] <- 0
 
   # --- FIX: Store original group labels for UI/display ---
   original_groups <- as.character(metadata[[group_column]])
@@ -336,33 +347,6 @@ perform_enrichment_analysis <- function(results_list, classification_data,
   }
 
   return(enrichment_results)
-}
-
-#' Load Custom Enrichment Sets
-#'
-#' Load custom lipid sets for enrichment analysis from a CSV file.
-#' File should have columns: Lipid, Set_Name
-#'
-#' @param file_path Path to CSV file with Lipid and Set_Name columns
-#' @return Named list of lipid sets
-#' @export
-#' @examples
-#' \donttest{
-#' custom_sets <- load_custom_enrichment_sets("my_sets.csv")
-#' }
-load_custom_enrichment_sets <- function(file_path) {
-  # Read the file
-  sets_df <- utils::read.csv(file_path, check.names = FALSE, stringsAsFactors = FALSE)
-
-  # Validate columns
-  if (!all(c("Lipid", "Set_Name") %in% colnames(sets_df))) {
-    stop("Custom sets file must contain 'Lipid' and 'Set_Name' columns")
-  }
-
-  # Create named list of sets
-  sets_list <- split(sets_df$Lipid, sets_df$Set_Name)
-
-  return(sets_list)
 }
 
 #' Create Pathway Sets

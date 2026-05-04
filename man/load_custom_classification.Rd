@@ -18,9 +18,14 @@ Load Custom Lipid Classification from a CSV File
 }
 \examples{
 tmp <- tempfile(fileext = ".csv")
-write.csv(data.frame(Lipid = c("PC 16:0_18:1","PE 18:0"),
-                     Class = c("Phospholipid","Phospholipid")),
-          tmp, row.names = FALSE)
+write.csv(
+  data.frame(
+    Lipid = c("PC 16:0_18:1", "PE 18:0"),
+    Class = c("Phospholipid", "Phospholipid")
+  ),
+  tmp,
+  row.names = FALSE
+)
 cls <- load_custom_classification(tmp)
 unlink(tmp)
 }

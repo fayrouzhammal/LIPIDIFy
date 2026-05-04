@@ -44,7 +44,8 @@ are coloured by the selected classification column.
 d <- load_lipidomics_data_from_df(generate_example_data())
 norm <- apply_normalizations(d$numeric_data, c("TIC", "Log2"))
 res <- perform_differential_analysis(norm, d$metadata, "Sample Group",
-  contrasts_list = NULL, method = "limma")
+  contrasts_list = NULL, method = "limma"
+)
 p <- create_volcano_plot_labeled(res$results[[1]])
 print(p)
 }

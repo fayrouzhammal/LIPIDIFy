@@ -43,6 +43,7 @@ d <- load_lipidomics_data_from_df(generate_example_data())
 p <- create_lipid_expression_barplot(
   d$numeric_data, d$metadata,
   selected_lipids = colnames(d$numeric_data)[1],
-  group_column = "Sample Group")
+  group_column = "Sample Group"
+)
 print(p)
 }

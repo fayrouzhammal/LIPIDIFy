@@ -18,6 +18,6 @@ After this step per-sample boxplots will look nearly identical --
 that is the intended and correct behaviour of quantile normalization.
 }
 \examples{
-m <- matrix(c(1000,2000,3000,4000,500,1500), nrow = 2)
+m <- matrix(c(1000, 2000, 3000, 4000, 500, 1500), nrow = 2)
 normalize_quantile(m)
 }

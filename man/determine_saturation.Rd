@@ -18,7 +18,7 @@ Parses standard lipid name notation to count double bonds and classifies the
 species as SFA (0 double bonds), MUFA (1) or PUFA (>1).
 }
 \examples{
-determine_saturation("PC 16:0_18:1")   # "MUFA"
-determine_saturation("PE 18:0_18:0")   # "SFA"
+determine_saturation("PC 16:0_18:1") # "MUFA"
+determine_saturation("PE 18:0_18:0") # "SFA"
 determine_saturation("TG 16:0_18:1_20:4") # "PUFA"
 }

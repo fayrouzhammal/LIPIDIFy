@@ -27,7 +27,7 @@ testthat::test_that("get_normalization_methods returns character vector", {
 
 testthat::test_that("expected methods present", {
   m <- get_normalization_methods()
-  for (x in c("TIC","PQN","Quantile","VSN","Median","Mean","Log2","Log10","Sqrt","None"))
+  for (x in c("TIC","PQN","Quantile","Log2Median","Median","Mean","Log2","Log10","Sqrt","None"))
     testthat::expect_true(x %in% m, info = paste("Missing:", x))
 })
 
@@ -68,10 +68,15 @@ testthat::test_that("normalize_quantile: warns for 1 sample", {
   testthat::expect_warning(normalize_quantile(make_matrix(n_samples = 1)))
 })
 
-# 5. normalize_vsn --------------------------------------------------------
-testthat::test_that("normalize_vsn: same dims", {
-  m <- make_matrix(); r <- normalize_vsn(m)
+# 5. normalize_log2median -------------------------------------------------
+testthat::test_that("normalize_log2median: same dims", {
+  m <- make_matrix(); r <- normalize_log2median(m)
   testthat::expect_equal(dim(r), dim(m))
+})
+testthat::test_that("normalize_vsn (deprecated alias): warns and returns same result", {
+  m <- make_matrix()
+  testthat::expect_warning(r <- normalize_vsn(m), "renamed to 'normalize_log2median'")
+  testthat::expect_equal(r, normalize_log2median(m))
 })
 
 # 6. normalize_median -----------------------------------------------------

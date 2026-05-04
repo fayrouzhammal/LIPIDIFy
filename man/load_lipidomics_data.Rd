@@ -25,9 +25,13 @@ Reads a CSV file and separates metadata columns from numeric lipid abundance col
 # Write a minimal CSV then load it
 tmp <- tempfile(fileext = ".csv")
 write.csv(
-  data.frame("Sample Name" = c("S1","S2"), "Sample Group" = c("A","B"),
-             "PC 16:0" = c(1000, 2000), check.names = FALSE),
-  tmp, row.names = FALSE)
+  data.frame(
+    "Sample Name" = c("S1", "S2"), "Sample Group" = c("A", "B"),
+    "PC 16:0" = c(1000, 2000), check.names = FALSE
+  ),
+  tmp,
+  row.names = FALSE
+)
 loaded <- load_lipidomics_data(tmp)
 dim(loaded$numeric_data)
 unlink(tmp)

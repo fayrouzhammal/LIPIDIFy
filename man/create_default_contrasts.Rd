@@ -18,5 +18,5 @@ special characters that are invalid for limma/edgeR, they should already
 be sanitized before calling this function.
 }
 \examples{
-create_default_contrasts(c("A","B","C"))
+create_default_contrasts(c("A", "B", "C"))
 }

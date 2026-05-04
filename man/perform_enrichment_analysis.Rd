@@ -29,3 +29,13 @@ List containing GSEA results
 \description{
 Perform Enrichment Analysis
 }
+\examples{
+d <- load_lipidomics_data_from_df(generate_example_data())
+norm <- apply_normalizations(d$numeric_data, c("TIC", "Log2"))
+cls <- classify_lipids(colnames(norm))
+res <- perform_differential_analysis(norm, d$metadata, "Sample Group",
+  contrasts_list = NULL, method = "limma"
+)
+enrich <- perform_enrichment_analysis(res$results, cls, min_set_size = 3)
+names(enrich)
+}
