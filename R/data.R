@@ -116,9 +116,12 @@ load_lipidomics_data_from_df <- function(data_df, metadata_columns = c("Sample N
 
   # Also move any non-numeric columns into metadata (fallback by column type)
   actually_numeric <- vapply(candidate_numeric_cols, function(col) {
-    # Check if column can be coerced to numeric without becoming all NA
-    # suppressWarnings is intentional: as.numeric() warns on coercion failure
-    suppressWarnings(!all(is.na(as.numeric(data_df[[col]]))))
+    converted <- tryCatch(
+      as.numeric(data_df[[col]]),
+      warning = function(w) rep(NA_real_, length(data_df[[col]])),
+      error = function(e) rep(NA_real_, length(data_df[[col]]))
+    )
+    !all(is.na(converted))
   }, logical(1))
 
   # Columns that fail numeric coercion go to metadata

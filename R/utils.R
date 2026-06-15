@@ -38,9 +38,12 @@ load_lipidomics_data <- function(file_path,
   candidate_numeric_cols <- names(data)[!names(data) %in% metadata_columns]
 
   actually_numeric <- vapply(candidate_numeric_cols, function(col) {
-    suppressWarnings({
-      !all(is.na(as.numeric(data[[col]])))
-    })
+    converted <- tryCatch(
+      as.numeric(data[[col]]),
+      warning = function(w) rep(NA_real_, length(data[[col]])),
+      error = function(e) rep(NA_real_, length(data[[col]]))
+    )
+    !all(is.na(converted))
   }, logical(1))
 
   non_numeric_cols <- candidate_numeric_cols[!actually_numeric]

@@ -777,7 +777,7 @@ Methods are applied left-to-right in the order you select them.
         ),
 
         # ------------------------------------------------------------------
-        # Preprocessing (Imputation + Batch correction) — applied post-normalisation
+        # Preprocessing (Imputation + Batch correction) - applied post-normalisation
         # ------------------------------------------------------------------
         shinydashboard::tabItem(
           tabName = "preprocessing",
@@ -2116,7 +2116,7 @@ Methods are applied left-to-right in the order you select them.
 (HFD_DabTram - HFD_Vehicle) - (ND_DabTram - ND_Vehicle)</pre>
           <p><em>Tip:</em> if group names contain spaces or special
           characters, they are internally sanitised with
-          <code>make.names()</code> — use the sanitised form in custom
+          <code>make.names()</code> - use the sanitised form in custom
           contrasts (e.g. <code>A375.ND.DabTram</code> for
           <code>A375 ND DabTram</code>).</p>
         ")
