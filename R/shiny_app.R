@@ -1698,7 +1698,7 @@ Methods are applied left-to-right in the order you select them.
               shiny::plotOutput("raw_heatmap_plot", height = "600px")
             )
             output$raw_heatmap_plot <- shiny::renderPlot({
-              if (inherits(hm, "pheatmap")) grid::grid.draw(hm$gtable) else print(hm)
+              if (inherits(hm, "pheatmap")) grid::grid.draw(hm$gtable) else hm
             })
           } else {
             top_n <- if (input$view_mode == "lipid") input$top_n_lipids else NULL
@@ -1904,7 +1904,7 @@ Methods are applied left-to-right in the order you select them.
               shiny::plotOutput("norm_heatmap_plot", height = "600px")
             )
             output$norm_heatmap_plot <- shiny::renderPlot({
-              if (inherits(hm, "pheatmap")) grid::grid.draw(hm$gtable) else print(hm)
+              if (inherits(hm, "pheatmap")) grid::grid.draw(hm$gtable) else hm
             })
 
           } else if (input$norm_plot_type == "pca") {
